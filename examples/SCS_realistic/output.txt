@@ -1,0 +1,569 @@
+Creating grid...
+Running suntans...
+Warning in MPI_GetValue...retrieved default value of Intz0B=0.00 which was not specified in data/suntans.dat.
+Warning in MPI_GetValue...retrieved default value of Intz0T=0.00 which was not specified in data/suntans.dat.
+Warning in MPI_GetValue...retrieved default value of ntoutStore=0.00 which was not specified in data/suntans.dat.
+Warning in MPI_GetValue...retrieved default value of TVDsalt=4.00 which was not specified in data/suntans.dat.
+Warning in MPI_GetValue...retrieved default value of TVDturb=0.00 which was not specified in data/suntans.dat.
+Warning in MPI_GetValue...retrieved default value of TVDmomentum=3.00 which was not specified in data/suntans.dat.
+Warning in MPI_GetValue...retrieved default value of conserveMomentum=1.00 which was not specified in data/suntans.dat.
+Warning in MPI_GetValue...retrieved default value of thetaM=-1.00 which was not specified in data/suntans.dat.
+Warning in MPI_GetValue...retrieved default value of mergeArrays=1.00 which was not specified in data/suntans.dat.
+Warning in MPI_GetValue...retrieved default value of marshmodel=0.00 which was not specified in data/suntans.dat.
+Warning in MPI_GetValue...retrieved default value of culvertmodel=0.00 which was not specified in data/suntans.dat.
+Warning in MPI_GetValue...retrieved default value of wavemodel=0.00 which was not specified in data/suntans.dat.
+Warning in MPI_GetValue...retrieved default value of agemethod=1.00 which was not specified in data/suntans.dat.
+Warning in MPI_GetValue...retrieved default value of latitude=29.00 which was not specified in data/suntans.dat.
+Warning in MPI_GetValue...retrieved default value of gmtoffset=0.00 which was not specified in data/suntans.dat.
+Warning in MPI_GetValue...retrieved default value of nstepsperncfile=999999.00 which was not specified in data/suntans.dat.
+Warning in MPI_GetValue...retrieved default value of ncfilectr=0.00 which was not specified in data/suntans.dat.
+Warning in MPI_GetValue...retrieved default value of laxWendroff=0.00 which was not specified in data/suntans.dat.
+Warning in MPI_GetValue...retrieved default value of hprecond=1.00 which was not specified in data/suntans.dat.
+Warning in MPI_GetValue...retrieved default value of prettyplot=0.00 which was not specified in data/suntans.dat.
+Warning in MPI_GetValue...retrieved default value of linearFS=0.00 which was not specified in data/suntans.dat.
+Warning in MPI_GetValue...retrieved default value of smoothbot=0.00 which was not specified in data/suntans.dat.
+Opening netcdf file: data/sun_IC.nc
+Opening netcdf file: data/sun_BC.nc
+Reading free-surface initial condition from netcdf file...
+Reading salinity initial condition from netcdf file...
+Reading temperature initial condition from netcdf file...
+Allocating boundary data structure...
+Reading boundary netcdf dimensions...
+Ntype 3 = 3
+Ntype 2 = 632
+Nseg= 0
+Nt = 294
+Ntl = 8
+Nk = 100
+Ne = 48142
+Ns = 31230
+hasType2 = 1
+hasType3 = 1
+hasSeg = 0
+initializing sponge variables, wave_nesting=2, Ne=48142, Nk=100, NT=3
+Zeroing boundary arrays...
+Finished Zeroing Type2 boundary arrays...
+Finished Zeroing Type 3 boundary arrays...
+Reading netcdf boundary coordinate data...
+Matching boundary points...
+Boundary NetCDF file grid # type 2 points = 632
+Boundary NetCDF file grid # type 3 points = 3
+Matching type-2 edges...
+Matching sponge edges...
+Matching low freq nudging edges...
+Matching type-3 points...
+Matching type-2 edges...
+Reading netcdf boundary initial data...
+Reading netCDF BC:  Type2 indx = 0... Type2 indx = 1... Type2 indx = 2... Sponge u indx = 0... Sponge u indx = 1... Sponge u indx = 2... Low pass u indx = 0... Low pass u indx = 1... Low pass u indx = 2... Type3 indx = 0 to 2... Done reading BC
+Reading netCDF BC:  Type2 indx = 3... Sponge u indx = 3... Type3 indx = 1 to 3... Done reading BC
+Creating netcdf file: data/sun_out.nc_0000.nc
+Initialising output netcdf files...Done.
+Outputting data to netcdf at step 1 of 10368
+Reading netCDF BC:  Type2 indx = 4... Sponge u indx = 4... Type3 indx = 2 to 4... Done reading BC
+Reading netCDF BC:  Type2 indx = 5... Sponge u indx = 5... Type3 indx = 3 to 5... Done reading BC
+0% at 1.0e+04s. CmaxU=4.49e-02, CmaxW=1.11e-01, 8.87e-01 s/step; 9108.27 s remaining.
+Outputting data to netcdf at step 108 of 10368
+Reading netCDF BC:  Type2 indx = 6... Sponge u indx = 6... Type3 indx = 4 to 6... Done reading BC
+Reading netCDF BC:  Type2 indx = 7... Sponge u indx = 7... Type3 indx = 5 to 7... Done reading BC
+Reading netCDF BC:  Type2 indx = 8... Sponge u indx = 8... Type3 indx = 6 to 8... Done reading BC
+1% at 2.1e+04s. CmaxU=3.88e-02, CmaxW=1.00e-01, 7.45e-01 s/step; 7575.34 s remaining.
+Outputting data to netcdf at step 216 of 10368
+Reading netCDF BC:  Type2 indx = 9... Sponge u indx = 9... Type3 indx = 7 to 9... Done reading BC
+Reading netCDF BC:  Type2 indx = 10... Sponge u indx = 10... Type3 indx = 8 to 10... Done reading BC
+Reading netCDF BC:  Type2 indx = 11... Sponge u indx = 11... Type3 indx = 9 to 11... Done reading BC
+2% at 3.1e+04s. CmaxU=3.16e-02, CmaxW=1.04e-01, 6.92e-01 s/step; 6955.85 s remaining.
+Outputting data to netcdf at step 324 of 10368
+Reading netCDF BC:  Type2 indx = 12... Sponge u indx = 12... Type3 indx = 10 to 12... Done reading BC
+Reading netCDF BC:  Type2 indx = 13... Sponge u indx = 13... Type3 indx = 11 to 13... Done reading BC
+Reading netCDF BC:  Type2 indx = 14... Sponge u indx = 14... Type3 indx = 12 to 14... Done reading BC
+3% at 4.1e+04s. CmaxU=7.13e-02, CmaxW=1.07e-01, 6.65e-01 s/step; 6616.68 s remaining.
+Outputting data to netcdf at step 432 of 10368
+Reading netCDF BC:  Type2 indx = 15... Sponge u indx = 15... Type3 indx = 13 to 15... Done reading BC
+Reading netCDF BC:  Type2 indx = 16... Sponge u indx = 16... Type3 indx = 14 to 16... Done reading BC
+Reading netCDF BC:  Type2 indx = 17... Sponge u indx = 17... Type3 indx = 15 to 17... Done reading BC
+4% at 5.2e+04s. CmaxU=5.67e-02, CmaxW=8.26e-02, 6.47e-01 s/step; 6370.99 s remaining.
+Outputting data to netcdf at step 540 of 10368
+Reading netCDF BC:  Type2 indx = 18... Sponge u indx = 18... Type3 indx = 16 to 18... Done reading BC
+Reading netCDF BC:  Type2 indx = 19... Sponge u indx = 19... Type3 indx = 17 to 19... Done reading BC
+Reading netCDF BC:  Type2 indx = 20... Sponge u indx = 20... Type3 indx = 18 to 20... Done reading BC
+5% at 6.2e+04s. CmaxU=4.05e-02, CmaxW=9.21e-02, 6.33e-01 s/step; 6175.64 s remaining.
+Outputting data to netcdf at step 648 of 10368
+Reading netCDF BC:  Type2 indx = 21... Sponge u indx = 21... Type3 indx = 19 to 21... Done reading BC
+Reading netCDF BC:  Type2 indx = 22... Sponge u indx = 22... Type3 indx = 20 to 22... Done reading BC
+Reading netCDF BC:  Type2 indx = 23... Sponge u indx = 23... Type3 indx = 21 to 23... Done reading BC
+6% at 7.2e+04s. CmaxU=5.07e-02, CmaxW=1.44e-01, 6.26e-01 s/step; 6035.27 s remaining.
+Outputting data to netcdf at step 756 of 10368
+Reading netCDF BC:  Type2 indx = 24... Sponge u indx = 24... Type3 indx = 22 to 24... Done reading BC
+Reading netCDF BC:  Type2 indx = 25... Sponge u indx = 25... Type3 indx = 23 to 25... Done reading BC
+7% at 8.2e+04s. CmaxU=5.12e-02, CmaxW=1.15e-01, 6.12e-01 s/step; 5843.49 s remaining.
+Reading netCDF BC:  Type2 indx = 26... Sponge u indx = 26... Type3 indx = 24 to 26... Done reading BC
+Outputting data to netcdf at step 864 of 10368
+Reading netCDF BC:  Type2 indx = 27... Sponge u indx = 27... Type3 indx = 25 to 27... Done reading BC
+Creating netcdf file: data/sun_AVG.nc_0000.nc
+Initialising output netcdf files...
+Outputting average data to netcdf at step 894 of 10368
+Reading netCDF BC:  Type2 indx = 28... Sponge u indx = 28... Type3 indx = 26 to 28... Done reading BC
+8% at 9.3e+04s. CmaxU=6.26e-02, CmaxW=1.08e-01, 6.24e-01 s/step; 5892.02 s remaining.
+Reading netCDF BC:  Type2 indx = 29... Sponge u indx = 29... Type3 indx = 27 to 29... Done reading BC
+Outputting data to netcdf at step 972 of 10368
+Reading netCDF BC:  Type2 indx = 30... Sponge u indx = 30... Type3 indx = 28 to 30... Done reading BC
+Reading netCDF BC:  Type2 indx = 31... Sponge u indx = 31... Type3 indx = 29 to 31... Done reading BC
+9% at 1.0e+05s. CmaxU=6.85e-02, CmaxW=1.03e-01, 6.19e-01 s/step; 5778.11 s remaining.
+Reading netCDF BC:  Type2 indx = 32... Sponge u indx = 32... Type3 indx = 30 to 32... Done reading BC
+Outputting data to netcdf at step 1080 of 10368
+Reading netCDF BC:  Type2 indx = 33... Sponge u indx = 33... Type3 indx = 31 to 33... Done reading BC
+Reading netCDF BC:  Type2 indx = 34... Sponge u indx = 34... Type3 indx = 32 to 34... Done reading BC
+10% at 1.1e+05s. CmaxU=1.06e-01, CmaxW=7.98e-02, 6.15e-01 s/step; 5677.40 s remaining.
+Reading netCDF BC:  Type2 indx = 35... Sponge u indx = 35... Type3 indx = 33 to 35... Done reading BC
+Outputting data to netcdf at step 1188 of 10368
+Reading netCDF BC:  Type2 indx = 36... Sponge u indx = 36... Type3 indx = 34 to 36... Done reading BC
+Reading netCDF BC:  Type2 indx = 37... Sponge u indx = 37... Type3 indx = 35 to 37... Done reading BC
+11% at 1.2e+05s. CmaxU=1.34e-01, CmaxW=7.76e-02, 6.11e-01 s/step; 5580.09 s remaining.
+Reading netCDF BC:  Type2 indx = 38... Sponge u indx = 38... Type3 indx = 36 to 38... Done reading BC
+Outputting data to netcdf at step 1296 of 10368
+Reading netCDF BC:  Type2 indx = 39... Sponge u indx = 39... Type3 indx = 37 to 39... Done reading BC
+Reading netCDF BC:  Type2 indx = 40... Sponge u indx = 40... Type3 indx = 38 to 40... Done reading BC
+12% at 1.3e+05s. CmaxU=1.18e-01, CmaxW=1.14e-01, 6.08e-01 s/step; 5494.12 s remaining.
+Reading netCDF BC:  Type2 indx = 41... Sponge u indx = 41... Type3 indx = 39 to 41... Done reading BC
+Outputting data to netcdf at step 1404 of 10368
+Reading netCDF BC:  Type2 indx = 42... Sponge u indx = 42... Type3 indx = 40 to 42... Done reading BC
+Reading netCDF BC:  Type2 indx = 43... Sponge u indx = 43... Type3 indx = 41 to 43... Done reading BC
+13% at 1.4e+05s. CmaxU=1.09e-01, CmaxW=1.30e-01, 6.06e-01 s/step; 5405.59 s remaining.
+Reading netCDF BC:  Type2 indx = 44... Sponge u indx = 44... Type3 indx = 42 to 44... Done reading BC
+Outputting data to netcdf at step 1512 of 10368
+Reading netCDF BC:  Type2 indx = 45... Sponge u indx = 45... Type3 indx = 43 to 45... Done reading BC
+14% at 1.5e+05s. CmaxU=1.19e-01, CmaxW=1.47e-01, 5.99e-01 s/step; 5288.27 s remaining.
+Reading netCDF BC:  Type2 indx = 46... Sponge u indx = 46... Type3 indx = 44 to 46... Done reading BC
+Reading netCDF BC:  Type2 indx = 47... Sponge u indx = 47... Type3 indx = 45 to 47... Done reading BC
+Outputting data to netcdf at step 1620 of 10368
+Reading netCDF BC:  Type2 indx = 48... Sponge u indx = 48... Type3 indx = 46 to 48... Done reading BC
+15% at 1.6e+05s. CmaxU=1.08e-01, CmaxW=1.90e-01, 5.97e-01 s/step; 5210.04 s remaining.
+Reading netCDF BC:  Type2 indx = 49... Sponge u indx = 49... Type3 indx = 47 to 49... Done reading BC
+Reading netCDF BC:  Type2 indx = 50... Sponge u indx = 50... Type3 indx = 48 to 50... Done reading BC
+Outputting data to netcdf at step 1728 of 10368
+Reading netCDF BC:  Type2 indx = 51... Sponge u indx = 51... Type3 indx = 49 to 51... Done reading BC
+16% at 1.8e+05s. CmaxU=1.03e-01, CmaxW=1.57e-01, 5.96e-01 s/step; 5136.55 s remaining.
+Reading netCDF BC:  Type2 indx = 52... Sponge u indx = 52... Low pass u indx = 3... Type3 indx = 50 to 52... Done reading BC
+Outputting average data to netcdf at step 1788 of 10368
+Reading netCDF BC:  Type2 indx = 53... Sponge u indx = 53... Type3 indx = 51 to 53... Done reading BC
+Outputting data to netcdf at step 1836 of 10368
+Reading netCDF BC:  Type2 indx = 54... Sponge u indx = 54... Type3 indx = 52 to 54... Done reading BC
+17% at 1.9e+05s. CmaxU=1.07e-01, CmaxW=1.45e-01, 6.02e-01 s/step; 5125.11 s remaining.
+Reading netCDF BC:  Type2 indx = 55... Sponge u indx = 55... Type3 indx = 53 to 55... Done reading BC
+Reading netCDF BC:  Type2 indx = 56... Sponge u indx = 56... Type3 indx = 54 to 56... Done reading BC
+Outputting data to netcdf at step 1944 of 10368
+Reading netCDF BC:  Type2 indx = 57... Sponge u indx = 57... Type3 indx = 55 to 57... Done reading BC
+18% at 2.0e+05s. CmaxU=1.30e-01, CmaxW=1.14e-01, 6.00e-01 s/step; 5050.40 s remaining.
+Reading netCDF BC:  Type2 indx = 58... Sponge u indx = 58... Type3 indx = 56 to 58... Done reading BC
+Reading netCDF BC:  Type2 indx = 59... Sponge u indx = 59... Type3 indx = 57 to 59... Done reading BC
+Outputting data to netcdf at step 2052 of 10368
+Reading netCDF BC:  Type2 indx = 60... Sponge u indx = 60... Type3 indx = 58 to 60... Done reading BC
+19% at 2.1e+05s. CmaxU=1.67e-01, CmaxW=9.69e-02, 5.99e-01 s/step; 4977.95 s remaining.
+Reading netCDF BC:  Type2 indx = 61... Sponge u indx = 61... Type3 indx = 59 to 61... Done reading BC
+Reading netCDF BC:  Type2 indx = 62... Sponge u indx = 62... Type3 indx = 60 to 62... Done reading BC
+Outputting data to netcdf at step 2160 of 10368
+Reading netCDF BC:  Type2 indx = 63... Sponge u indx = 63... Type3 indx = 61 to 63... Done reading BC
+20% at 2.2e+05s. CmaxU=1.78e-01, CmaxW=1.14e-01, 5.98e-01 s/step; 4906.47 s remaining.
+Reading netCDF BC:  Type2 indx = 64... Sponge u indx = 64... Type3 indx = 62 to 64... Done reading BC
+Reading netCDF BC:  Type2 indx = 65... Sponge u indx = 65... Type3 indx = 63 to 65... Done reading BC
+21% at 2.3e+05s. CmaxU=1.72e-01, CmaxW=1.36e-01, 5.91e-01 s/step; 4784.36 s remaining.
+Outputting data to netcdf at step 2268 of 10368
+Reading netCDF BC:  Type2 indx = 66... Sponge u indx = 66... Type3 indx = 64 to 66... Done reading BC
+Reading netCDF BC:  Type2 indx = 67... Sponge u indx = 67... Type3 indx = 65 to 67... Done reading BC
+Reading netCDF BC:  Type2 indx = 68... Sponge u indx = 68... Type3 indx = 66 to 68... Done reading BC
+22% at 2.4e+05s. CmaxU=1.70e-01, CmaxW=1.32e-01, 5.90e-01 s/step; 4717.76 s remaining.
+Outputting data to netcdf at step 2376 of 10368
+Reading netCDF BC:  Type2 indx = 69... Sponge u indx = 69... Type3 indx = 67 to 69... Done reading BC
+Reading netCDF BC:  Type2 indx = 70... Sponge u indx = 70... Type3 indx = 68 to 70... Done reading BC
+Reading netCDF BC:  Type2 indx = 71... Sponge u indx = 71... Type3 indx = 69 to 71... Done reading BC
+23% at 2.5e+05s. CmaxU=1.71e-01, CmaxW=1.60e-01, 5.89e-01 s/step; 4649.69 s remaining.
+Outputting data to netcdf at step 2484 of 10368
+Reading netCDF BC:  Type2 indx = 72... Sponge u indx = 72... Type3 indx = 70 to 72... Done reading BC
+Reading netCDF BC:  Type2 indx = 73... Sponge u indx = 73... Type3 indx = 71 to 73... Done reading BC
+Reading netCDF BC:  Type2 indx = 74... Sponge u indx = 74... Type3 indx = 72 to 74... Done reading BC
+24% at 2.6e+05s. CmaxU=1.59e-01, CmaxW=1.35e-01, 5.88e-01 s/step; 4583.72 s remaining.
+Outputting data to netcdf at step 2592 of 10368
+Reading netCDF BC:  Type2 indx = 75... Sponge u indx = 75... Type3 indx = 73 to 75... Done reading BC
+Reading netCDF BC:  Type2 indx = 76... Sponge u indx = 76... Type3 indx = 74 to 76... Done reading BC
+Reading netCDF BC:  Type2 indx = 77... Sponge u indx = 77... Type3 indx = 75 to 77... Done reading BC
+25% at 2.7e+05s. CmaxU=1.51e-01, CmaxW=1.05e-01, 5.88e-01 s/step; 4517.99 s remaining.
+Outputting average data to netcdf at step 2682 of 10368
+Outputting data to netcdf at step 2700 of 10368
+Reading netCDF BC:  Type2 indx = 78... Sponge u indx = 78... Type3 indx = 76 to 78... Done reading BC
+Reading netCDF BC:  Type2 indx = 79... Sponge u indx = 79... Type3 indx = 77 to 79... Done reading BC
+Reading netCDF BC:  Type2 indx = 80... Sponge u indx = 80... Type3 indx = 78 to 80... Done reading BC
+26% at 2.8e+05s. CmaxU=1.58e-01, CmaxW=1.02e-01, 5.92e-01 s/step; 4491.24 s remaining.
+Outputting data to netcdf at step 2808 of 10368
+Reading netCDF BC:  Type2 indx = 81... Sponge u indx = 81... Type3 indx = 79 to 81... Done reading BC
+Reading netCDF BC:  Type2 indx = 82... Sponge u indx = 82... Type3 indx = 80 to 82... Done reading BC
+Reading netCDF BC:  Type2 indx = 83... Sponge u indx = 83... Type3 indx = 81 to 83... Done reading BC
+27% at 2.9e+05s. CmaxU=1.87e-01, CmaxW=8.13e-02, 5.91e-01 s/step; 4424.72 s remaining.
+Outputting data to netcdf at step 2916 of 10368
+Reading netCDF BC:  Type2 indx = 84... Sponge u indx = 84... Type3 indx = 82 to 84... Done reading BC
+Reading netCDF BC:  Type2 indx = 85... Sponge u indx = 85... Type3 indx = 83 to 85... Done reading BC
+28% at 3.0e+05s. CmaxU=1.93e-01, CmaxW=7.40e-02, 5.89e-01 s/step; 4344.58 s remaining.
+Reading netCDF BC:  Type2 indx = 86... Sponge u indx = 86... Type3 indx = 84 to 86... Done reading BC
+Outputting data to netcdf at step 3024 of 10368
+Reading netCDF BC:  Type2 indx = 87... Sponge u indx = 87... Type3 indx = 85 to 87... Done reading BC
+Reading netCDF BC:  Type2 indx = 88... Sponge u indx = 88... Type3 indx = 86 to 88... Done reading BC
+29% at 3.1e+05s. CmaxU=2.01e-01, CmaxW=1.16e-01, 5.88e-01 s/step; 4281.53 s remaining.
+Reading netCDF BC:  Type2 indx = 89... Sponge u indx = 89... Type3 indx = 87 to 89... Done reading BC
+Outputting data to netcdf at step 3132 of 10368
+Reading netCDF BC:  Type2 indx = 90... Sponge u indx = 90... Type3 indx = 88 to 90... Done reading BC
+Reading netCDF BC:  Type2 indx = 91... Sponge u indx = 91... Type3 indx = 89 to 91... Done reading BC
+30% at 3.2e+05s. CmaxU=2.07e-01, CmaxW=1.03e-01, 5.88e-01 s/step; 4215.36 s remaining.
+Reading netCDF BC:  Type2 indx = 92... Sponge u indx = 92... Type3 indx = 90 to 92... Done reading BC
+Outputting data to netcdf at step 3240 of 10368
+Reading netCDF BC:  Type2 indx = 93... Sponge u indx = 93... Type3 indx = 91 to 93... Done reading BC
+Reading netCDF BC:  Type2 indx = 94... Sponge u indx = 94... Type3 indx = 92 to 94... Done reading BC
+31% at 3.3e+05s. CmaxU=2.13e-01, CmaxW=1.40e-01, 5.87e-01 s/step; 4151.06 s remaining.
+Reading netCDF BC:  Type2 indx = 95... Sponge u indx = 95... Type3 indx = 93 to 95... Done reading BC
+Outputting data to netcdf at step 3348 of 10368
+Reading netCDF BC:  Type2 indx = 96... Sponge u indx = 96... Type3 indx = 94 to 96... Done reading BC
+Reading netCDF BC:  Type2 indx = 97... Sponge u indx = 97... Type3 indx = 95 to 97... Done reading BC
+32% at 3.4e+05s. CmaxU=2.01e-01, CmaxW=1.03e-01, 5.87e-01 s/step; 4087.58 s remaining.
+Reading netCDF BC:  Type2 indx = 98... Sponge u indx = 98... Type3 indx = 96 to 98... Done reading BC
+Outputting data to netcdf at step 3456 of 10368
+Reading netCDF BC:  Type2 indx = 99... Sponge u indx = 99... Type3 indx = 97 to 99... Done reading BC
+Reading netCDF BC:  Type2 indx = 100... Sponge u indx = 100... Type3 indx = 98 to 100... Done reading BC
+33% at 3.5e+05s. CmaxU=1.90e-01, CmaxW=8.42e-02, 5.86e-01 s/step; 4023.76 s remaining.
+Reading netCDF BC:  Type2 indx = 101... Sponge u indx = 101... Type3 indx = 99 to 101... Done reading BC
+Outputting data to netcdf at step 3564 of 10368
+Reading netCDF BC:  Type2 indx = 102... Sponge u indx = 102... Low pass u indx = 4... Type3 indx = 100 to 102... Done reading BC
+Outputting average data to netcdf at step 3576 of 10368
+Reading netCDF BC:  Type2 indx = 103... Sponge u indx = 103... Type3 indx = 101 to 103... Done reading BC
+34% at 3.6e+05s. CmaxU=1.78e-01, CmaxW=7.59e-02, 5.90e-01 s/step; 3988.22 s remaining.
+Reading netCDF BC:  Type2 indx = 104... Sponge u indx = 104... Type3 indx = 102 to 104... Done reading BC
+Outputting data to netcdf at step 3672 of 10368
+Reading netCDF BC:  Type2 indx = 105... Sponge u indx = 105... Type3 indx = 103 to 105... Done reading BC
+Reading netCDF BC:  Type2 indx = 106... Sponge u indx = 106... Type3 indx = 104 to 106... Done reading BC
+35% at 3.7e+05s. CmaxU=1.75e-01, CmaxW=8.06e-02, 5.89e-01 s/step; 3925.01 s remaining.
+Reading netCDF BC:  Type2 indx = 107... Sponge u indx = 107... Type3 indx = 105 to 107... Done reading BC
+Outputting data to netcdf at step 3780 of 10368
+Reading netCDF BC:  Type2 indx = 108... Sponge u indx = 108... Type3 indx = 106 to 108... Done reading BC
+36% at 3.8e+05s. CmaxU=2.02e-01, CmaxW=9.55e-02, 5.87e-01 s/step; 3851.79 s remaining.
+Reading netCDF BC:  Type2 indx = 109... Sponge u indx = 109... Type3 indx = 107 to 109... Done reading BC
+Reading netCDF BC:  Type2 indx = 110... Sponge u indx = 110... Type3 indx = 108 to 110... Done reading BC
+Outputting data to netcdf at step 3888 of 10368
+Reading netCDF BC:  Type2 indx = 111... Sponge u indx = 111... Type3 indx = 109 to 111... Done reading BC
+37% at 3.9e+05s. CmaxU=2.15e-01, CmaxW=1.04e-01, 5.87e-01 s/step; 3787.23 s remaining.
+Reading netCDF BC:  Type2 indx = 112... Sponge u indx = 112... Type3 indx = 110 to 112... Done reading BC
+Reading netCDF BC:  Type2 indx = 113... Sponge u indx = 113... Type3 indx = 111 to 113... Done reading BC
+Outputting data to netcdf at step 3996 of 10368
+Reading netCDF BC:  Type2 indx = 114... Sponge u indx = 114... Type3 indx = 112 to 114... Done reading BC
+38% at 4.0e+05s. CmaxU=2.10e-01, CmaxW=1.51e-01, 5.86e-01 s/step; 3723.91 s remaining.
+Reading netCDF BC:  Type2 indx = 115... Sponge u indx = 115... Type3 indx = 113 to 115... Done reading BC
+Reading netCDF BC:  Type2 indx = 116... Sponge u indx = 116... Type3 indx = 114 to 116... Done reading BC
+Outputting data to netcdf at step 4104 of 10368
+Reading netCDF BC:  Type2 indx = 117... Sponge u indx = 117... Type3 indx = 115 to 117... Done reading BC
+39% at 4.1e+05s. CmaxU=2.09e-01, CmaxW=1.66e-01, 5.86e-01 s/step; 3660.89 s remaining.
+Reading netCDF BC:  Type2 indx = 118... Sponge u indx = 118... Type3 indx = 116 to 118... Done reading BC
+Reading netCDF BC:  Type2 indx = 119... Sponge u indx = 119... Type3 indx = 117 to 119... Done reading BC
+Outputting data to netcdf at step 4212 of 10368
+Reading netCDF BC:  Type2 indx = 120... Sponge u indx = 120... Type3 indx = 118 to 120... Done reading BC
+40% at 4.2e+05s. CmaxU=2.17e-01, CmaxW=1.23e-01, 5.85e-01 s/step; 3597.09 s remaining.
+Reading netCDF BC:  Type2 indx = 121... Sponge u indx = 121... Type3 indx = 119 to 121... Done reading BC
+Reading netCDF BC:  Type2 indx = 122... Sponge u indx = 122... Type3 indx = 120 to 122... Done reading BC
+Outputting data to netcdf at step 4320 of 10368
+Reading netCDF BC:  Type2 indx = 123... Sponge u indx = 123... Type3 indx = 121 to 123... Done reading BC
+41% at 4.3e+05s. CmaxU=2.04e-01, CmaxW=9.69e-02, 5.85e-01 s/step; 3532.85 s remaining.
+Reading netCDF BC:  Type2 indx = 124... Sponge u indx = 124... Type3 indx = 122 to 124... Done reading BC
+Reading netCDF BC:  Type2 indx = 125... Sponge u indx = 125... Type3 indx = 123 to 125... Done reading BC
+Outputting data to netcdf at step 4428 of 10368
+Reading netCDF BC:  Type2 indx = 126... Sponge u indx = 126... Type3 indx = 124 to 126... Done reading BC
+42% at 4.4e+05s. CmaxU=1.95e-01, CmaxW=1.01e-01, 5.84e-01 s/step; 3469.50 s remaining.
+Reading netCDF BC:  Type2 indx = 127... Sponge u indx = 127... Type3 indx = 125 to 127... Done reading BC
+Outputting average data to netcdf at step 4470 of 10368
+Reading netCDF BC:  Type2 indx = 128... Sponge u indx = 128... Type3 indx = 126 to 128... Done reading BC
+43% at 4.5e+05s. CmaxU=1.96e-01, CmaxW=8.51e-02, 5.84e-01 s/step; 3407.91 s remaining.
+Outputting data to netcdf at step 4536 of 10368
+Reading netCDF BC:  Type2 indx = 129... Sponge u indx = 129... Type3 indx = 127 to 129... Done reading BC
+Reading netCDF BC:  Type2 indx = 130... Sponge u indx = 130... Type3 indx = 128 to 130... Done reading BC
+Reading netCDF BC:  Type2 indx = 131... Sponge u indx = 131... Type3 indx = 129 to 131... Done reading BC
+44% at 4.6e+05s. CmaxU=2.03e-01, CmaxW=8.68e-02, 5.84e-01 s/step; 3346.26 s remaining.
+Outputting data to netcdf at step 4644 of 10368
+Reading netCDF BC:  Type2 indx = 132... Sponge u indx = 132... Type3 indx = 130 to 132... Done reading BC
+Reading netCDF BC:  Type2 indx = 133... Sponge u indx = 133... Type3 indx = 131 to 133... Done reading BC
+Reading netCDF BC:  Type2 indx = 134... Sponge u indx = 134... Type3 indx = 132 to 134... Done reading BC
+45% at 4.7e+05s. CmaxU=1.99e-01, CmaxW=9.25e-02, 5.83e-01 s/step; 3284.27 s remaining.
+Outputting data to netcdf at step 4752 of 10368
+Reading netCDF BC:  Type2 indx = 135... Sponge u indx = 135... Type3 indx = 133 to 135... Done reading BC
+Reading netCDF BC:  Type2 indx = 136... Sponge u indx = 136... Type3 indx = 134 to 136... Done reading BC
+Reading netCDF BC:  Type2 indx = 137... Sponge u indx = 137... Type3 indx = 135 to 137... Done reading BC
+46% at 4.8e+05s. CmaxU=2.15e-01, CmaxW=1.32e-01, 5.83e-01 s/step; 3223.09 s remaining.
+Outputting data to netcdf at step 4860 of 10368
+Reading netCDF BC:  Type2 indx = 138... Sponge u indx = 138... Type3 indx = 136 to 138... Done reading BC
+Reading netCDF BC:  Type2 indx = 139... Sponge u indx = 139... Type3 indx = 137 to 139... Done reading BC
+Reading netCDF BC:  Type2 indx = 140... Sponge u indx = 140... Type3 indx = 138 to 140... Done reading BC
+47% at 4.9e+05s. CmaxU=2.23e-01, CmaxW=1.35e-01, 5.83e-01 s/step; 3161.34 s remaining.
+Outputting data to netcdf at step 4968 of 10368
+Reading netCDF BC:  Type2 indx = 141... Sponge u indx = 141... Type3 indx = 139 to 141... Done reading BC
+Reading netCDF BC:  Type2 indx = 142... Sponge u indx = 142... Type3 indx = 140 to 142... Done reading BC
+Reading netCDF BC:  Type2 indx = 143... Sponge u indx = 143... Type3 indx = 141 to 143... Done reading BC
+48% at 5.0e+05s. CmaxU=2.26e-01, CmaxW=2.55e-01, 5.83e-01 s/step; 3100.04 s remaining.
+Outputting data to netcdf at step 5076 of 10368
+Reading netCDF BC:  Type2 indx = 144... Sponge u indx = 144... Type3 indx = 142 to 144... Done reading BC
+Reading netCDF BC:  Type2 indx = 145... Sponge u indx = 145... Type3 indx = 143 to 145... Done reading BC
+Reading netCDF BC:  Type2 indx = 146... Sponge u indx = 146... Type3 indx = 144 to 146... Done reading BC
+49% at 5.2e+05s. CmaxU=2.24e-01, CmaxW=1.11e-01, 5.82e-01 s/step; 3038.38 s remaining.
+Outputting data to netcdf at step 5184 of 10368
+Reading netCDF BC:  Type2 indx = 147... Sponge u indx = 147... Type3 indx = 145 to 147... Done reading BC
+Reading netCDF BC:  Type2 indx = 148... Sponge u indx = 148... Type3 indx = 146 to 148... Done reading BC
+50% at 5.3e+05s. CmaxU=2.21e-01, CmaxW=1.19e-01, 5.81e-01 s/step; 2972.09 s remaining.
+Reading netCDF BC:  Type2 indx = 149... Sponge u indx = 149... Type3 indx = 147 to 149... Done reading BC
+Outputting data to netcdf at step 5292 of 10368
+Reading netCDF BC:  Type2 indx = 150... Sponge u indx = 150... Type3 indx = 148 to 150... Done reading BC
+Reading netCDF BC:  Type2 indx = 151... Sponge u indx = 151... Type3 indx = 149 to 151... Done reading BC
+51% at 5.4e+05s. CmaxU=2.11e-01, CmaxW=7.92e-02, 5.81e-01 s/step; 2910.97 s remaining.
+Outputting average data to netcdf at step 5364 of 10368
+Reading netCDF BC:  Type2 indx = 152... Sponge u indx = 152... Low pass u indx = 5... Type3 indx = 150 to 152... Done reading BC
+Outputting data to netcdf at step 5400 of 10368
+Reading netCDF BC:  Type2 indx = 153... Sponge u indx = 153... Type3 indx = 151 to 153... Done reading BC
+Reading netCDF BC:  Type2 indx = 154... Sponge u indx = 154... Type3 indx = 152 to 154... Done reading BC
+52% at 5.5e+05s. CmaxU=2.09e-01, CmaxW=9.27e-02, 5.83e-01 s/step; 2861.32 s remaining.
+Reading netCDF BC:  Type2 indx = 155... Sponge u indx = 155... Type3 indx = 153 to 155... Done reading BC
+Outputting data to netcdf at step 5508 of 10368
+Reading netCDF BC:  Type2 indx = 156... Sponge u indx = 156... Type3 indx = 154 to 156... Done reading BC
+Reading netCDF BC:  Type2 indx = 157... Sponge u indx = 157... Type3 indx = 155 to 157... Done reading BC
+53% at 5.6e+05s. CmaxU=2.22e-01, CmaxW=1.47e-01, 5.83e-01 s/step; 2799.80 s remaining.
+Reading netCDF BC:  Type2 indx = 158... Sponge u indx = 158... Type3 indx = 156 to 158... Done reading BC
+Outputting data to netcdf at step 5616 of 10368
+Reading netCDF BC:  Type2 indx = 159... Sponge u indx = 159... Type3 indx = 157 to 159... Done reading BC
+Reading netCDF BC:  Type2 indx = 160... Sponge u indx = 160... Type3 indx = 158 to 160... Done reading BC
+54% at 5.7e+05s. CmaxU=2.20e-01, CmaxW=1.16e-01, 5.82e-01 s/step; 2738.34 s remaining.
+Reading netCDF BC:  Type2 indx = 161... Sponge u indx = 161... Type3 indx = 159 to 161... Done reading BC
+Outputting data to netcdf at step 5724 of 10368
+Reading netCDF BC:  Type2 indx = 162... Sponge u indx = 162... Type3 indx = 160 to 162... Done reading BC
+Reading netCDF BC:  Type2 indx = 163... Sponge u indx = 163... Type3 indx = 161 to 163... Done reading BC
+55% at 5.8e+05s. CmaxU=2.19e-01, CmaxW=1.71e-01, 5.82e-01 s/step; 2676.43 s remaining.
+Reading netCDF BC:  Type2 indx = 164... Sponge u indx = 164... Type3 indx = 162 to 164... Done reading BC
+Outputting data to netcdf at step 5832 of 10368
+Reading netCDF BC:  Type2 indx = 165... Sponge u indx = 165... Type3 indx = 163 to 165... Done reading BC
+Reading netCDF BC:  Type2 indx = 166... Sponge u indx = 166... Type3 indx = 164 to 166... Done reading BC
+56% at 5.9e+05s. CmaxU=2.25e-01, CmaxW=1.73e-01, 5.81e-01 s/step; 2614.78 s remaining.
+Reading netCDF BC:  Type2 indx = 167... Sponge u indx = 167... Type3 indx = 165 to 167... Done reading BC
+Outputting data to netcdf at step 5940 of 10368
+Reading netCDF BC:  Type2 indx = 168... Sponge u indx = 168... Type3 indx = 166 to 168... Done reading BC
+57% at 6.0e+05s. CmaxU=2.43e-01, CmaxW=1.61e-01, 5.80e-01 s/step; 2548.81 s remaining.
+Reading netCDF BC:  Type2 indx = 169... Sponge u indx = 169... Type3 indx = 167 to 169... Done reading BC
+Reading netCDF BC:  Type2 indx = 170... Sponge u indx = 170... Type3 indx = 168 to 170... Done reading BC
+Outputting data to netcdf at step 6048 of 10368
+Reading netCDF BC:  Type2 indx = 171... Sponge u indx = 171... Type3 indx = 169 to 171... Done reading BC
+58% at 6.1e+05s. CmaxU=2.47e-01, CmaxW=1.25e-01, 5.80e-01 s/step; 2488.94 s remaining.
+Reading netCDF BC:  Type2 indx = 172... Sponge u indx = 172... Type3 indx = 170 to 172... Done reading BC
+Reading netCDF BC:  Type2 indx = 173... Sponge u indx = 173... Type3 indx = 171 to 173... Done reading BC
+Outputting data to netcdf at step 6156 of 10368
+Reading netCDF BC:  Type2 indx = 174... Sponge u indx = 174... Type3 indx = 172 to 174... Done reading BC
+59% at 6.2e+05s. CmaxU=2.32e-01, CmaxW=1.15e-01, 5.80e-01 s/step; 2428.51 s remaining.
+Reading netCDF BC:  Type2 indx = 175... Sponge u indx = 175... Type3 indx = 173 to 175... Done reading BC
+Reading netCDF BC:  Type2 indx = 176... Sponge u indx = 176... Type3 indx = 174 to 176... Done reading BC
+Outputting average data to netcdf at step 6258 of 10368
+Outputting data to netcdf at step 6264 of 10368
+Reading netCDF BC:  Type2 indx = 177... Sponge u indx = 177... Type3 indx = 175 to 177... Done reading BC
+60% at 6.3e+05s. CmaxU=2.18e-01, CmaxW=1.16e-01, 5.82e-01 s/step; 2377.33 s remaining.
+Reading netCDF BC:  Type2 indx = 178... Sponge u indx = 178... Type3 indx = 176 to 178... Done reading BC
+Reading netCDF BC:  Type2 indx = 179... Sponge u indx = 179... Type3 indx = 177 to 179... Done reading BC
+Outputting data to netcdf at step 6372 of 10368
+Reading netCDF BC:  Type2 indx = 180... Sponge u indx = 180... Type3 indx = 178 to 180... Done reading BC
+61% at 6.4e+05s. CmaxU=2.37e-01, CmaxW=1.96e-01, 5.82e-01 s/step; 2315.79 s remaining.
+Reading netCDF BC:  Type2 indx = 181... Sponge u indx = 181... Type3 indx = 179 to 181... Done reading BC
+Reading netCDF BC:  Type2 indx = 182... Sponge u indx = 182... Type3 indx = 180 to 182... Done reading BC
+Outputting data to netcdf at step 6480 of 10368
+Reading netCDF BC:  Type2 indx = 183... Sponge u indx = 183... Type3 indx = 181 to 183... Done reading BC
+62% at 6.5e+05s. CmaxU=2.29e-01, CmaxW=1.76e-01, 5.81e-01 s/step; 2254.15 s remaining.
+Reading netCDF BC:  Type2 indx = 184... Sponge u indx = 184... Type3 indx = 182 to 184... Done reading BC
+Reading netCDF BC:  Type2 indx = 185... Sponge u indx = 185... Type3 indx = 183 to 185... Done reading BC
+Outputting data to netcdf at step 6588 of 10368
+Reading netCDF BC:  Type2 indx = 186... Sponge u indx = 186... Type3 indx = 184 to 186... Done reading BC
+63% at 6.6e+05s. CmaxU=2.17e-01, CmaxW=1.69e-01, 5.81e-01 s/step; 2193.26 s remaining.
+Reading netCDF BC:  Type2 indx = 187... Sponge u indx = 187... Type3 indx = 185 to 187... Done reading BC
+Reading netCDF BC:  Type2 indx = 188... Sponge u indx = 188... Type3 indx = 186 to 188... Done reading BC
+64% at 6.7e+05s. CmaxU=2.30e-01, CmaxW=1.46e-01, 5.79e-01 s/step; 2124.89 s remaining.
+Outputting data to netcdf at step 6696 of 10368
+Reading netCDF BC:  Type2 indx = 189... Sponge u indx = 189... Type3 indx = 187 to 189... Done reading BC
+Reading netCDF BC:  Type2 indx = 190... Sponge u indx = 190... Type3 indx = 188 to 190... Done reading BC
+Reading netCDF BC:  Type2 indx = 191... Sponge u indx = 191... Type3 indx = 189 to 191... Done reading BC
+65% at 6.8e+05s. CmaxU=2.43e-01, CmaxW=1.86e-01, 5.78e-01 s/step; 2064.47 s remaining.
+Outputting data to netcdf at step 6804 of 10368
+Reading netCDF BC:  Type2 indx = 192... Sponge u indx = 192... Type3 indx = 190 to 192... Done reading BC
+Reading netCDF BC:  Type2 indx = 193... Sponge u indx = 193... Type3 indx = 191 to 193... Done reading BC
+Reading netCDF BC:  Type2 indx = 194... Sponge u indx = 194... Type3 indx = 192 to 194... Done reading BC
+66% at 6.9e+05s. CmaxU=2.62e-01, CmaxW=1.25e-01, 5.78e-01 s/step; 2004.18 s remaining.
+Outputting data to netcdf at step 6912 of 10368
+Reading netCDF BC:  Type2 indx = 195... Sponge u indx = 195... Type3 indx = 193 to 195... Done reading BC
+Reading netCDF BC:  Type2 indx = 196... Sponge u indx = 196... Type3 indx = 194 to 196... Done reading BC
+Reading netCDF BC:  Type2 indx = 197... Sponge u indx = 197... Type3 indx = 195 to 197... Done reading BC
+67% at 7.0e+05s. CmaxU=2.59e-01, CmaxW=1.36e-01, 5.78e-01 s/step; 1944.35 s remaining.
+Outputting data to netcdf at step 7020 of 10368
+Reading netCDF BC:  Type2 indx = 198... Sponge u indx = 198... Type3 indx = 196 to 198... Done reading BC
+Reading netCDF BC:  Type2 indx = 199... Sponge u indx = 199... Type3 indx = 197 to 199... Done reading BC
+Reading netCDF BC:  Type2 indx = 200... Sponge u indx = 200... Type3 indx = 198 to 200... Done reading BC
+68% at 7.1e+05s. CmaxU=2.46e-01, CmaxW=1.59e-01, 5.78e-01 s/step; 1884.21 s remaining.
+Outputting data to netcdf at step 7128 of 10368
+Reading netCDF BC:  Type2 indx = 201... Sponge u indx = 201... Type3 indx = 199 to 201... Done reading BC
+Outputting average data to netcdf at step 7152 of 10368
+Reading netCDF BC:  Type2 indx = 202... Sponge u indx = 202... Low pass u indx = 6... Type3 indx = 200 to 202... Done reading BC
+Reading netCDF BC:  Type2 indx = 203... Sponge u indx = 203... Type3 indx = 201 to 203... Done reading BC
+69% at 7.2e+05s. CmaxU=2.50e-01, CmaxW=1.77e-01, 5.80e-01 s/step; 1831.15 s remaining.
+Outputting data to netcdf at step 7236 of 10368
+Reading netCDF BC:  Type2 indx = 204... Sponge u indx = 204... Type3 indx = 202 to 204... Done reading BC
+Reading netCDF BC:  Type2 indx = 205... Sponge u indx = 205... Type3 indx = 203 to 205... Done reading BC
+Reading netCDF BC:  Type2 indx = 206... Sponge u indx = 206... Type3 indx = 204 to 206... Done reading BC
+70% at 7.3e+05s. CmaxU=2.66e-01, CmaxW=2.76e-01, 5.80e-01 s/step; 1770.73 s remaining.
+Outputting data to netcdf at step 7344 of 10368
+Reading netCDF BC:  Type2 indx = 207... Sponge u indx = 207... Type3 indx = 205 to 207... Done reading BC
+Reading netCDF BC:  Type2 indx = 208... Sponge u indx = 208... Type3 indx = 206 to 208... Done reading BC
+71% at 7.4e+05s. CmaxU=2.45e-01, CmaxW=1.30e-01, 5.79e-01 s/step; 1707.91 s remaining.
+Reading netCDF BC:  Type2 indx = 209... Sponge u indx = 209... Type3 indx = 207 to 209... Done reading BC
+Outputting data to netcdf at step 7452 of 10368
+Reading netCDF BC:  Type2 indx = 210... Sponge u indx = 210... Type3 indx = 208 to 210... Done reading BC
+Reading netCDF BC:  Type2 indx = 211... Sponge u indx = 211... Type3 indx = 209 to 211... Done reading BC
+72% at 7.5e+05s. CmaxU=2.25e-01, CmaxW=1.64e-01, 5.78e-01 s/step; 1647.85 s remaining.
+Reading netCDF BC:  Type2 indx = 212... Sponge u indx = 212... Type3 indx = 210 to 212... Done reading BC
+Outputting data to netcdf at step 7560 of 10368
+Reading netCDF BC:  Type2 indx = 213... Sponge u indx = 213... Type3 indx = 211 to 213... Done reading BC
+Reading netCDF BC:  Type2 indx = 214... Sponge u indx = 214... Type3 indx = 212 to 214... Done reading BC
+73% at 7.6e+05s. CmaxU=2.29e-01, CmaxW=1.43e-01, 5.78e-01 s/step; 1587.86 s remaining.
+Reading netCDF BC:  Type2 indx = 215... Sponge u indx = 215... Type3 indx = 213 to 215... Done reading BC
+Outputting data to netcdf at step 7668 of 10368
+Reading netCDF BC:  Type2 indx = 216... Sponge u indx = 216... Type3 indx = 214 to 216... Done reading BC
+Reading netCDF BC:  Type2 indx = 217... Sponge u indx = 217... Type3 indx = 215 to 217... Done reading BC
+74% at 7.7e+05s. CmaxU=2.70e-01, CmaxW=1.77e-01, 5.78e-01 s/step; 1528.11 s remaining.
+Reading netCDF BC:  Type2 indx = 218... Sponge u indx = 218... Type3 indx = 216 to 218... Done reading BC
+Outputting data to netcdf at step 7776 of 10368
+Reading netCDF BC:  Type2 indx = 219... Sponge u indx = 219... Type3 indx = 217 to 219... Done reading BC
+Reading netCDF BC:  Type2 indx = 220... Sponge u indx = 220... Type3 indx = 218 to 220... Done reading BC
+75% at 7.8e+05s. CmaxU=2.94e-01, CmaxW=1.51e-01, 5.78e-01 s/step; 1468.16 s remaining.
+Reading netCDF BC:  Type2 indx = 221... Sponge u indx = 221... Type3 indx = 219 to 221... Done reading BC
+Outputting data to netcdf at step 7884 of 10368
+Reading netCDF BC:  Type2 indx = 222... Sponge u indx = 222... Type3 indx = 220 to 222... Done reading BC
+Reading netCDF BC:  Type2 indx = 223... Sponge u indx = 223... Type3 indx = 221 to 223... Done reading BC
+76% at 7.9e+05s. CmaxU=2.73e-01, CmaxW=1.86e-01, 5.78e-01 s/step; 1407.94 s remaining.
+Reading netCDF BC:  Type2 indx = 224... Sponge u indx = 224... Type3 indx = 222 to 224... Done reading BC
+Outputting data to netcdf at step 7992 of 10368
+Reading netCDF BC:  Type2 indx = 225... Sponge u indx = 225... Type3 indx = 223 to 225... Done reading BC
+Reading netCDF BC:  Type2 indx = 226... Sponge u indx = 226... Type3 indx = 224 to 226... Done reading BC
+77% at 8.0e+05s. CmaxU=2.56e-01, CmaxW=1.76e-01, 5.77e-01 s/step; 1347.84 s remaining.
+Outputting average data to netcdf at step 8046 of 10368
+Reading netCDF BC:  Type2 indx = 227... Sponge u indx = 227... Type3 indx = 225 to 227... Done reading BC
+Outputting data to netcdf at step 8100 of 10368
+Reading netCDF BC:  Type2 indx = 228... Sponge u indx = 228... Type3 indx = 226 to 228... Done reading BC
+Reading netCDF BC:  Type2 indx = 229... Sponge u indx = 229... Type3 indx = 227 to 229... Done reading BC
+78% at 8.1e+05s. CmaxU=2.82e-01, CmaxW=2.20e-01, 5.79e-01 s/step; 1292.17 s remaining.
+Reading netCDF BC:  Type2 indx = 230... Sponge u indx = 230... Type3 indx = 228 to 230... Done reading BC
+Outputting data to netcdf at step 8208 of 10368
+Reading netCDF BC:  Type2 indx = 231... Sponge u indx = 231... Type3 indx = 229 to 231... Done reading BC
+79% at 8.2e+05s. CmaxU=2.77e-01, CmaxW=2.33e-01, 5.79e-01 s/step; 1231.09 s remaining.
+Reading netCDF BC:  Type2 indx = 232... Sponge u indx = 232... Type3 indx = 230 to 232... Done reading BC
+Reading netCDF BC:  Type2 indx = 233... Sponge u indx = 233... Type3 indx = 231 to 233... Done reading BC
+Outputting data to netcdf at step 8316 of 10368
+Reading netCDF BC:  Type2 indx = 234... Sponge u indx = 234... Type3 indx = 232 to 234... Done reading BC
+80% at 8.3e+05s. CmaxU=2.35e-01, CmaxW=1.14e-01, 5.78e-01 s/step; 1171.45 s remaining.
+Reading netCDF BC:  Type2 indx = 235... Sponge u indx = 235... Type3 indx = 233 to 235... Done reading BC
+Reading netCDF BC:  Type2 indx = 236... Sponge u indx = 236... Type3 indx = 234 to 236... Done reading BC
+Outputting data to netcdf at step 8424 of 10368
+Reading netCDF BC:  Type2 indx = 237... Sponge u indx = 237... Type3 indx = 235 to 237... Done reading BC
+81% at 8.4e+05s. CmaxU=2.44e-01, CmaxW=1.73e-01, 5.78e-01 s/step; 1111.69 s remaining.
+Reading netCDF BC:  Type2 indx = 238... Sponge u indx = 238... Type3 indx = 236 to 238... Done reading BC
+Reading netCDF BC:  Type2 indx = 239... Sponge u indx = 239... Type3 indx = 237 to 239... Done reading BC
+Outputting data to netcdf at step 8532 of 10368
+Reading netCDF BC:  Type2 indx = 240... Sponge u indx = 240... Type3 indx = 238 to 240... Done reading BC
+82% at 8.5e+05s. CmaxU=2.78e-01, CmaxW=1.65e-01, 5.79e-01 s/step; 1052.52 s remaining.
+Reading netCDF BC:  Type2 indx = 241... Sponge u indx = 241... Type3 indx = 239 to 241... Done reading BC
+Reading netCDF BC:  Type2 indx = 242... Sponge u indx = 242... Type3 indx = 240 to 242... Done reading BC
+Outputting data to netcdf at step 8640 of 10368
+Reading netCDF BC:  Type2 indx = 243... Sponge u indx = 243... Type3 indx = 241 to 243... Done reading BC
+83% at 8.7e+05s. CmaxU=3.16e-01, CmaxW=2.46e-01, 5.79e-01 s/step; 993.07 s remaining.
+Reading netCDF BC:  Type2 indx = 244... Sponge u indx = 244... Type3 indx = 242 to 244... Done reading BC
+Reading netCDF BC:  Type2 indx = 245... Sponge u indx = 245... Type3 indx = 243 to 245... Done reading BC
+Outputting data to netcdf at step 8748 of 10368
+Reading netCDF BC:  Type2 indx = 246... Sponge u indx = 246... Type3 indx = 244 to 246... Done reading BC
+84% at 8.8e+05s. CmaxU=3.02e-01, CmaxW=2.04e-01, 5.79e-01 s/step; 933.58 s remaining.
+Reading netCDF BC:  Type2 indx = 247... Sponge u indx = 247... Type3 indx = 245 to 247... Done reading BC
+Reading netCDF BC:  Type2 indx = 248... Sponge u indx = 248... Type3 indx = 246 to 248... Done reading BC
+Outputting data to netcdf at step 8856 of 10368
+Reading netCDF BC:  Type2 indx = 249... Sponge u indx = 249... Type3 indx = 247 to 249... Done reading BC
+85% at 8.9e+05s. CmaxU=2.92e-01, CmaxW=2.51e-01, 5.79e-01 s/step; 873.88 s remaining.
+Reading netCDF BC:  Type2 indx = 250... Sponge u indx = 250... Type3 indx = 248 to 250... Done reading BC
+Reading netCDF BC:  Type2 indx = 251... Sponge u indx = 251... Type3 indx = 249 to 251... Done reading BC
+Outputting average data to netcdf at step 8940 of 10368
+86% at 9.0e+05s. CmaxU=2.90e-01, CmaxW=3.66e-01, 5.79e-01 s/step; 814.41 s remaining.
+Outputting data to netcdf at step 8964 of 10368
+Reading netCDF BC:  Type2 indx = 252... Sponge u indx = 252... Low pass u indx = 7... Type3 indx = 250 to 252... Done reading BC
+Reading netCDF BC:  Type2 indx = 253... Sponge u indx = 253... Type3 indx = 251 to 253... Done reading BC
+Reading netCDF BC:  Type2 indx = 254... Sponge u indx = 254... Type3 indx = 252 to 254... Done reading BC
+87% at 9.1e+05s. CmaxU=2.97e-01, CmaxW=2.96e-01, 5.79e-01 s/step; 755.00 s remaining.
+Outputting data to netcdf at step 9072 of 10368
+Reading netCDF BC:  Type2 indx = 255... Sponge u indx = 255... Type3 indx = 253 to 255... Done reading BC
+Reading netCDF BC:  Type2 indx = 256... Sponge u indx = 256... Type3 indx = 254 to 256... Done reading BC
+Reading netCDF BC:  Type2 indx = 257... Sponge u indx = 257... Type3 indx = 255 to 257... Done reading BC
+88% at 9.2e+05s. CmaxU=2.78e-01, CmaxW=1.66e-01, 5.79e-01 s/step; 695.37 s remaining.
+Outputting data to netcdf at step 9180 of 10368
+Reading netCDF BC:  Type2 indx = 258... Sponge u indx = 258... Type3 indx = 256 to 258... Done reading BC
+Reading netCDF BC:  Type2 indx = 259... Sponge u indx = 259... Type3 indx = 257 to 259... Done reading BC
+Reading netCDF BC:  Type2 indx = 260... Sponge u indx = 260... Type3 indx = 258 to 260... Done reading BC
+89% at 9.3e+05s. CmaxU=2.64e-01, CmaxW=1.44e-01, 5.79e-01 s/step; 635.85 s remaining.
+Outputting data to netcdf at step 9288 of 10368
+Reading netCDF BC:  Type2 indx = 261... Sponge u indx = 261... Type3 indx = 259 to 261... Done reading BC
+Reading netCDF BC:  Type2 indx = 262... Sponge u indx = 262... Type3 indx = 260 to 262... Done reading BC
+Reading netCDF BC:  Type2 indx = 263... Sponge u indx = 263... Type3 indx = 261 to 263... Done reading BC
+90% at 9.4e+05s. CmaxU=2.63e-01, CmaxW=1.62e-01, 5.79e-01 s/step; 576.13 s remaining.
+Outputting data to netcdf at step 9396 of 10368
+Reading netCDF BC:  Type2 indx = 264... Sponge u indx = 264... Type3 indx = 262 to 264... Done reading BC
+Reading netCDF BC:  Type2 indx = 265... Sponge u indx = 265... Type3 indx = 263 to 265... Done reading BC
+Reading netCDF BC:  Type2 indx = 266... Sponge u indx = 266... Type3 indx = 264 to 266... Done reading BC
+91% at 9.5e+05s. CmaxU=2.81e-01, CmaxW=2.44e-01, 5.79e-01 s/step; 516.46 s remaining.
+Outputting data to netcdf at step 9504 of 10368
+Reading netCDF BC:  Type2 indx = 267... Sponge u indx = 267... Type3 indx = 265 to 267... Done reading BC
+Reading netCDF BC:  Type2 indx = 268... Sponge u indx = 268... Type3 indx = 266 to 268... Done reading BC
+Reading netCDF BC:  Type2 indx = 269... Sponge u indx = 269... Type3 indx = 267 to 269... Done reading BC
+92% at 9.6e+05s. CmaxU=3.15e-01, CmaxW=1.76e-01, 5.79e-01 s/step; 456.74 s remaining.
+Outputting data to netcdf at step 9612 of 10368
+Reading netCDF BC:  Type2 indx = 270... Sponge u indx = 270... Type3 indx = 268 to 270... Done reading BC
+Reading netCDF BC:  Type2 indx = 271... Sponge u indx = 271... Type3 indx = 269 to 271... Done reading BC
+93% at 9.7e+05s. CmaxU=3.36e-01, CmaxW=2.47e-01, 5.78e-01 s/step; 396.62 s remaining.
+Reading netCDF BC:  Type2 indx = 272... Sponge u indx = 272... Type3 indx = 270 to 272... Done reading BC
+Outputting data to netcdf at step 9720 of 10368
+Reading netCDF BC:  Type2 indx = 273... Sponge u indx = 273... Type3 indx = 271 to 273... Done reading BC
+Reading netCDF BC:  Type2 indx = 274... Sponge u indx = 274... Type3 indx = 272 to 274... Done reading BC
+94% at 9.8e+05s. CmaxU=3.20e-01, CmaxW=3.02e-01, 5.78e-01 s/step; 337.02 s remaining.
+Reading netCDF BC:  Type2 indx = 275... Sponge u indx = 275... Type3 indx = 273 to 275... Done reading BC
+Outputting data to netcdf at step 9828 of 10368
+Reading netCDF BC:  Type2 indx = 276... Sponge u indx = 276... Type3 indx = 274 to 276... Done reading BC
+Outputting average data to netcdf at step 9834 of 10368
+Reading netCDF BC:  Type2 indx = 277... Sponge u indx = 277... Type3 indx = 275 to 277... Done reading BC
+95% at 9.9e+05s. CmaxU=3.28e-01, CmaxW=3.83e-01, 5.79e-01 s/step; 278.12 s remaining.
+Reading netCDF BC:  Type2 indx = 278... Sponge u indx = 278... Type3 indx = 276 to 278... Done reading BC
+Outputting data to netcdf at step 9936 of 10368
+Reading netCDF BC:  Type2 indx = 279... Sponge u indx = 279... Type3 indx = 277 to 279... Done reading BC
+Reading netCDF BC:  Type2 indx = 280... Sponge u indx = 280... Type3 indx = 278 to 280... Done reading BC
+96% at 1.0e+06s. CmaxU=3.45e-01, CmaxW=2.77e-01, 5.80e-01 s/step; 218.49 s remaining.
+Reading netCDF BC:  Type2 indx = 281... Sponge u indx = 281... Type3 indx = 279 to 281... Done reading BC
+Outputting data to netcdf at step 10044 of 10368
+Reading netCDF BC:  Type2 indx = 282... Sponge u indx = 282... Type3 indx = 280 to 282... Done reading BC
+Reading netCDF BC:  Type2 indx = 283... Sponge u indx = 283... Type3 indx = 281 to 283... Done reading BC
+97% at 1.0e+06s. CmaxU=3.05e-01, CmaxW=1.94e-01, 5.80e-01 s/step; 158.79 s remaining.
+Reading netCDF BC:  Type2 indx = 284... Sponge u indx = 284... Type3 indx = 282 to 284... Done reading BC
+Outputting data to netcdf at step 10152 of 10368
+Reading netCDF BC:  Type2 indx = 285... Sponge u indx = 285... Type3 indx = 283 to 285... Done reading BC
+Reading netCDF BC:  Type2 indx = 286... Sponge u indx = 286... Type3 indx = 284 to 286... Done reading BC
+98% at 1.0e+06s. CmaxU=2.88e-01, CmaxW=1.60e-01, 5.80e-01 s/step; 99.10 s remaining.
+Reading netCDF BC:  Type2 indx = 287... Sponge u indx = 287... Type3 indx = 285 to 287... Done reading BC
+Outputting data to netcdf at step 10260 of 10368
+Reading netCDF BC:  Type2 indx = 288... Sponge u indx = 288... Type3 indx = 286 to 288... Done reading BC
+Reading netCDF BC:  Type2 indx = 289... Sponge u indx = 289... Type3 indx = 287 to 289... Done reading BC
+99% at 1.0e+06s. CmaxU=3.01e-01, CmaxW=2.51e-01, 5.80e-01 s/step; 39.41 s remaining.
+Reading netCDF BC:  Type2 indx = 290... Sponge u indx = 290... Type3 indx = 288 to 290... Done reading BC
+Outputting data to netcdf at step 10368 of 10368
+Total simulation time: 6007.26 s
+Average per time step: 5.79e-01 s
+Timing Summary:
+  Nonhydrostatic pressure: 1054.09 s (17.55%)
+  Free surface and vertical friction: 2197.75 s (36.58%)
+  Explicit terms: 480.85 s (8.00%)
+  Scalar transport: 382.74 s (6.37%)
+  Bounds checking: 61.05 s (1.02%)
+  I/O: 1350.24 s (22.48%)
+  Remainder: 480.55 s (8.00%)
+  Communication time: 4.34e+02 s
+  Computation/Communication: 1.29e+01

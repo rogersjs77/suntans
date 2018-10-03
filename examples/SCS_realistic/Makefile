@@ -1,0 +1,77 @@
+# SUNTANSHOME=/Users/fringer/suntans-periodic/main
+SUNTANSHOME=../../main
+include $(SUNTANSHOME)/Makefile.in
+
+ifneq ($(MPIHOME),)
+	CC = $(MPIHOME)/bin/mpicc
+	MPIDEF = 
+	MPIINC = -I$(MPIHOME)
+else
+	CC = gcc
+	MPIDEF = -DNOMPI
+	MPIINC = 
+endif
+
+ifneq ($(PARMETISHOME),)
+	PARMETISINC = -I$(PARMETISHOME)/ParMETISLib
+endif
+ifneq ($(NETCDF4HOME),)
+	NETCDFINCLUDE=-I$(NETCDF4HOME)/include
+	NETCDFDEF = -DUSENETCDF
+else
+	NETCDFLIBDIR = 
+	NETCDFINCLUDE = 
+	NETCDFLD = 
+	NETCDFSRC=
+endif
+
+LD = $(CC) 
+CFLAGS = 
+MATHLIB = -lm
+
+EXEC = lee_wave
+OBJS = 
+SUN = $(SUNTANSHOME)/sun
+INCLUDES = -I$(SUNTANSHOME) $(MPIINC) $(PARMETISINC) $(NETCDFINCLUDE) 
+DEFS = $(MPIDEF) $(NETCDFDEF)
+NUMPROCS = 64
+datadir = data
+
+all:	data
+
+test: clobber data	
+	sh $(EXEC).sh $(NUMPROCS)  2>&1 |  tee output.txt
+	rm -f ./data/*.dat.*
+
+run: clean data	
+	sh $(EXEC).sh $(NUMPROCS)  2>&1 |  tee output.txt
+	rm -f ./data/*.dat.*
+
+inputs:
+	sh estuarynetcdf.sh
+
+join:   
+	python ~/suntans/SourceForge/python/SUNTANS/joinsun.py -f Estuary_SUNTANS.nc -p $(datadir) -t 168 -n $(NUMPROCS)
+
+
+data:	$(SUN)
+
+.c.o:	
+	$(LD) -c $(INCLUDES) $(DEFS) $*.c
+
+$(SUN):	initialization.o boundaries.o state.o sources.o
+	cp initialization.o boundaries.o state.o sources.o $(SUNTANSHOME)
+	make -C $(SUNTANSHOME)
+
+valgrind: clobber data
+	mkdir $(datadir)
+	cp rundata/* $(datadir)
+	$(MPIHOME)/bin/mpirun -np $(NUMPROCS) ./$(SUN) -g -vv --datadir=$(datadir)
+	$(MPIHOME)/bin/mpirun -np $(NUMPROCS) valgrind --tool=memcheck --leak-check=yes ./$(SUN) -s -vvv --datadir=$(datadir) 2>&1 |  tee output.txt
+
+clean:
+	rm -f *.o
+
+clobber: clean
+	rm -rf *~ \#*\# PI* $(EXEC) gmon.out data rundata/*~
+
