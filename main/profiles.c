@@ -338,7 +338,7 @@ static void OpenDataFiles(int myproc) {
     if(ContainsCharacter(ProfileVariables,'h')) {
       MPI_GetFile(filename,DATAFILE,"FreeSurfaceFile","OpenDataFiles",myproc);
       if(myproc==0) {
-	sprintf(str,"%s.prof",filename);
+	sprintf(str,"%sa.prof",filename);
 	FreeSurfaceProfFID = fopen(str,"w");
       }
     }
@@ -346,7 +346,7 @@ static void OpenDataFiles(int myproc) {
     if(ContainsCharacter(ProfileVariables,'u')) {
       MPI_GetFile(filename,DATAFILE,"HorizontalVelocityFile","OpenDataFiles",myproc);
       if(myproc==0) {
-	sprintf(str,"%s.prof",filename);
+	sprintf(str,"%sa.prof",filename);
 	HorizontalVelocityProfFID = fopen(str,"w");
       }
     }
@@ -354,7 +354,7 @@ static void OpenDataFiles(int myproc) {
     if(ContainsCharacter(ProfileVariables,'s')) {
       MPI_GetFile(filename,DATAFILE,"SalinityFile","OpenDataFiles",myproc);
       if(myproc==0) {
-	sprintf(str,"%s.prof",filename);
+	sprintf(str,"%sa.prof",filename);
 	SalinityProfFID = fopen(str,"w");
       }
     }
@@ -362,7 +362,7 @@ static void OpenDataFiles(int myproc) {
     if(ContainsCharacter(ProfileVariables,'b')) {
       MPI_GetFile(filename,DATAFILE,"BGSalinityFile","OpenDataFiles",myproc);
       if(myproc==0) {
-	sprintf(str,"%s.prof",filename);
+	sprintf(str,"%sa.prof",filename);
 	BGSalinityProfFID = fopen(str,"w");
       }
     }
@@ -370,7 +370,7 @@ static void OpenDataFiles(int myproc) {
     if(ContainsCharacter(ProfileVariables,'T')) {
       MPI_GetFile(filename,DATAFILE,"TemperatureFile","OpenDataFiles",myproc);
       if(myproc==0) {
-	sprintf(str,"%s.prof",filename);
+	sprintf(str,"%sa.prof",filename);
 	TemperatureProfFID = fopen(str,"w");
       }
     }
@@ -378,7 +378,7 @@ static void OpenDataFiles(int myproc) {
     if(ContainsCharacter(ProfileVariables,'q')) {
       MPI_GetFile(filename,DATAFILE,"PressureFile","OpenDataFiles",myproc);
       if(myproc==0) {
-	sprintf(str,"%s.prof",filename);
+	sprintf(str,"%sa.prof",filename);
 	PressureProfFID = fopen(str,"w");
       }
     }
@@ -386,7 +386,7 @@ static void OpenDataFiles(int myproc) {
     if(ContainsCharacter(ProfileVariables,'n')) {
       MPI_GetFile(filename,DATAFILE,"EddyViscosityFile","OpenDataFiles",myproc);
       if(myproc==0) {
-	sprintf(str,"%s.prof",filename);
+	sprintf(str,"%sa.prof",filename);
 	EddyViscosityProfFID = fopen(str,"w");
       }
     }
@@ -394,7 +394,7 @@ static void OpenDataFiles(int myproc) {
     if(ContainsCharacter(ProfileVariables,'k')) {
       MPI_GetFile(filename,DATAFILE,"ScalarDiffusivityFile","OpenDataFiles",myproc);
       if(myproc==0) {
-	sprintf(str,"%s.prof",filename);
+	sprintf(str,"%sa.prof",filename);
 	ScalarDiffusivityProfFID = fopen(str,"w");
       }
     }
@@ -406,7 +406,7 @@ static void OpenDataFiles(int myproc) {
 	sprintf(str,"Sediment%dFile",nosize+1);
 	MPI_GetFile(filename,DATAFILE,str,"OpenDataFiles",myproc);
 	if(myproc==0) {
-	  sprintf(str,"%s.prof",filename);
+	  sprintf(str,"%sa.prof",filename);
 	  SediProfFID[nosize] = fopen(str,"w");
 	}
       }

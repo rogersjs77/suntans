@@ -24,6 +24,7 @@ REAL ***SediC,// sediment concentration [fraction][cell][Nkmax]
      *Gsedi, // density of sediment/ density of water [fraction] -> given in sedi.dat
      *Seditb, // store the tb for each cell [cell]
      *Seditbmax, // store the tb max
+     *alphaSSC,
      //***Erosion, // erosion term in first layer is for suspended sediment transport [fraction][cell][Nlayer]
      //***Erosion_old, //added
      //**Woldsedi, //vertical velocity for sediment particles [cell][Nkmax+1]
@@ -69,7 +70,7 @@ void AllocateSediment(gridT *grid, int myproc);
 void SettlingVelocity(gridT *grid, physT *phys, propT *prop, int myproc);
 void FreeSediment(gridT *grid, int myproc);
 void CalculateErosion(gridT *grid, physT *phys, propT *prop,  int myproc);
-void CalculateDeposition(gridT *grid, physT *phys, int myproc); //used by calculateerosion and Bedchange
+void CalculateDeposition(gridT *grid, physT *phys, propT *prop,int myproc); //used by calculateerosion and Bedchange
 void BedChange(gridT *grid, physT *phys, propT *prop, int myproc);
 void SedimentSource(REAL **A, REAL **B, gridT *grid, physT *phys, propT *prop,int Nosize, REAL theta);
 void SedimentVerticalVelocity(gridT *grid, physT *phys,int Nosize,int symbol, int myproc);

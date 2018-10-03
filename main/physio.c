@@ -11,9 +11,8 @@
  */
 #include "physio.h"
 #include "merge.h"
-#include "sendrecv.h"
 #include "mynetcdf.h"
-
+#include "subgrid.h"
 /************************************************************************/
 /*                                                                      */
 /*                    All functions are public.                         */
@@ -49,7 +48,7 @@ void Write2DData(REAL *array, int merge, FILE *fid, char *error_message,
   if(myproc==writeProc) {
     nwritten=fwrite(array2DPointer,sizeof(REAL),arraySize,fid);
     if(nwritten!=arraySize) {
-      printf("%s",error_message);
+      printf(error_message);
       exit(EXIT_WRITING);
     }
   }
@@ -81,7 +80,7 @@ void Write3DData(REAL **array, REAL *temp_array, int merge, FILE *fid, char *err
 	}
 	nwritten=fwrite(merged2DArray,sizeof(REAL),mergedGrid->Nc,fid);
 	if(nwritten!=mergedGrid->Nc) {
-	  printf("%s",error_message);
+	  printf(error_message);
 	  exit(EXIT_WRITING);
 	}
       }
@@ -96,7 +95,7 @@ void Write3DData(REAL **array, REAL *temp_array, int merge, FILE *fid, char *err
       }
       nwritten=fwrite(temp_array,sizeof(REAL),grid->Nc,fid);
       if(nwritten!=grid->Nc) {
-	printf("%s",error_message);
+	printf(error_message);
 	exit(EXIT_WRITING);
       }
     }
@@ -261,26 +260,31 @@ void OutputPhysicalVariables(gridT *grid, physT *phys, propT *prop,int myproc, i
 
   if(!(prop->n%prop->ntout) || prop->n==1+prop->nstart || blowup) {
 
-    if(myproc==0 && VERBOSE>1) {
-      if(!blowup) {
+    if(myproc==0 && VERBOSE>1) 
+      if(!blowup) 
         printf("Outputting data at step %d of %d\n",prop->n,prop->nsteps+prop->nstart);
-      } else {
+      else
         printf("Outputting blowup data at step %d of %d\n",prop->n,prop->nsteps+prop->nstart);
-      }
-    }
+
     Write2DData(phys->h,prop->mergeArrays,prop->FreeSurfaceFID,"Error outputting free-surface data!\n",
     		grid,numprocs,myproc,comm);
 
     // compute quadratic interpolated estimates for velocity using pretty plot and don't redo work
     if(prop->prettyplot==1 && prop->interp != QUAD) {
       ISendRecvEdgeData3D(phys->u,grid,myproc,comm);
-      ComputeUC(phys->uc, phys->vc, phys,grid, myproc, QUAD);
+      ComputeUC(phys->uc, phys->vc, phys,grid, myproc, QUAD,prop->subgrid);
     }
 
     // Output u, v, w.  Interpolate w from faces to obtain it at the cell-centers first
-    for(i=0;i<grid->Nc;i++)
+    for(i=0;i<grid->Nc;i++){
       for(k=0;k<grid->Nk[i];k++)
-	phys->stmp2[i][k]=0.5*(phys->w[i][k]+phys->w[i][k+1]);
+	      phys->stmp2[i][k]=0.5*(phys->w[i][k]+phys->w[i][k+1]);
+      if(prop->subgrid && !prop->wetdry)
+        if(subgrid->segN==1)
+          if(subgrid->hmax[i]!=subgrid->hmin[i]){
+            phys->stmp2[i][grid->Nk[i]-1]=phys->w[i][grid->Nk[i]-1];
+          }
+    }
 
     Write3DData(phys->uc,phys->htmp,prop->mergeArrays,prop->HorizontalVelocityFID,
 		"Error outputting uc-data!\n",grid,numprocs,myproc,comm);
@@ -414,6 +418,11 @@ void ReadPhysicalVariables(gridT *grid, physT *phys, propT *prop, int myproc, MP
 
   if(fread(&(prop->nstart),sizeof(int),1,prop->StartFID) != 1)
     printf("Error reading prop->nstart\n");
+    // Initialise the netcdf time
+  prop->toffSet = getToffSet(prop->basetime,prop->starttime);
+  prop->nctime = prop->toffSet*86400.0 + prop->nstart*prop->dt;
+  prop->restartNC=1;
+  prop->restartAvgNC=1;
 
   if(fread(phys->h,sizeof(REAL),grid->Nc,prop->StartFID) != grid->Nc)
     printf("Error reading phys->h\n");
@@ -480,13 +489,23 @@ void ReadPhysicalVariables(gridT *grid, physT *phys, propT *prop, int myproc, MP
   for(i=0;i<grid->Nc;i++) 
     if(fread(phys->s0[i],sizeof(REAL),grid->Nk[i],prop->StartFID) != grid->Nk[i])
       printf("Error reading phys->s0[i]\n");
+
+    // if(){
+    //   for(j=0;j<grid->Ne;j++) 
+    // if(fread(average->u_avg[j],sizeof(REAL),grid->Nke[j],prop->StartFID) != grid->Nke[j])
+    //   printf("Error reading phys->u[j]\n");
+
+    // }
+
+
+
   fclose(prop->StartFID);
 
   UpdateDZ(grid,phys,prop, 0);
 
   // cell centered velocity computed so that this does not 
   // need to be reconsidered 
-  ComputeUC(phys->uc, phys->vc, phys,grid, myproc, prop->interp);
+  ComputeUC(phys->uc, phys->vc, phys,grid, myproc, prop->interp,prop->subgrid);
 
   ISendRecvCellData3D(phys->uc,grid,myproc,comm);
   ISendRecvCellData3D(phys->vc,grid,myproc,comm);
@@ -494,3 +513,6 @@ void ReadPhysicalVariables(gridT *grid, physT *phys, propT *prop, int myproc, MP
   // Set the density from s and T using the equation of state
   SetDensity(grid,phys,prop);
 }
+
+
+

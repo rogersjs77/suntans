@@ -22,6 +22,7 @@
 #include "mympi.h"
 #include "scalars.h"
 #include "physio.h"
+#include "subgrid.h"
 
 /*
  * Function: ReadSediProperties
@@ -206,7 +207,7 @@ void AllocateSediment(gridT *grid, int myproc) {
  * here assume Erosion and Deposition initial value is 0, may have error
  */
 void InitializeSediment(gridT *grid, physT *phys, propT *prop,  int myproc) { 
-  int i,j,k,ne;
+  int i,j,k;
   REAL *stmp,z;
   FILE *InitSedimentFID;
   char str[BUFFERLENGTH], filename[BUFFERLENGTH];
@@ -221,11 +222,9 @@ void InitializeSediment(gridT *grid, physT *phys, propT *prop,  int myproc) {
       sediments->Ws[i][j][grid->Nk[j]]=0;
     }
 
-    for(j=0;j<(grid->edgedist[5]-grid->edgedist[2]);j++) {
-      ne=grid->edgep[j+grid->edgedist[2]]; 
-      for(k=0;k<grid->Nke[ne];k++)
+    for(j=0;j<(grid->edgedist[5]-grid->edgedist[2]);j++)
+      for(k=0;k<grid->Nke[j];k++)
         sediments->boundary_sediC[i][j][k]=0; // boundary_sediC will be set using BoundaryScalars function  
-    }
   }
   
   for(i=0;i<grid->Nc;i++) {
@@ -324,7 +323,7 @@ void InitializeSediment(gridT *grid, physT *phys, propT *prop,  int myproc) {
   }
   // calculate initial Deposition & deposition
   CalculateErosion(grid,phys,prop,myproc);
-  CalculateDeposition(grid,phys,myproc);
+  CalculateDeposition(grid,phys,prop,myproc);
 }
 
 /*
@@ -492,7 +491,7 @@ void SettlingVelocity(gridT *grid, physT *phys, propT *prop,  int myproc) {
  */
 void CalculateErosion(gridT *grid, physT *phys, propT *prop, int myproc) { 
   int j,k;
-  REAL taub,utmp,taubtmp1,taubtmp2,em,alpha,ratio, depotmp, nettmp, erosionmax,ds90;
+  REAL taub,utmp,taubtmp1,taubtmp2,em,alpha,ratio, depotmp, nettmp, erosionmax,ds90,dzh;
   // assume ks=3*ds90
   ds90=MPI_GetValue(DATAFILE,"Ds90","CalculationErosion",myproc);
   // coefficient for hard erosion
@@ -504,10 +503,24 @@ void CalculateErosion(gridT *grid, physT *phys, propT *prop, int myproc) {
     // calculate taub
     //taub = prop->CdB*(1+phys->rho[j][grid->Nk[j]-1])*RHO0*(pow(phys->uc[j][grid->Nk[j]-1], 2)+pow(phys->vc[j][grid->Nk[j]-1], 2));
     utmp=sqrt(pow(phys->uc[j][grid->Nk[j]-1], 2)+pow(phys->vc[j][grid->Nk[j]-1], 2));
-    taub=pow(log(10*0.5*grid->dzz[j][grid->Nk[j]-1]/ds90)/0.41,-2)*(1+phys->rho[j][grid->Nk[j]-1])*RHO0*pow(utmp,2);
+    
+    if(prop->subgrid){
+      dzh=subgrid->Acceff[j][grid->Nk[j]-1]*grid->dzz[j][grid->Nk[j]-1]/subgrid->Acveff[j][grid->Nk[j]-1];
+      taub=pow(log(10*0.5*dzh/ds90)/0.41,-2)*(1+phys->rho[j][grid->Nk[j]-1])*RHO0*pow(utmp,2);
+    }else
+      taub=pow(log(10*0.5*grid->dzz[j][grid->Nk[j]-1]/ds90)/0.41,-2)*(1+phys->rho[j][grid->Nk[j]-1])*RHO0*pow(utmp,2);
 
-    if((phys->h[j]+grid->dv[j])/grid->dv[j]<0.001)
+    if((phys->h[j]+grid->dv[j])<0.001)
       taub=0;
+
+    if(prop->subgrid){
+      if(subgrid->Heff[j]<BUFFERHEIGHT || subgrid->Heff[j]<1e-3)
+        taub=0;
+    }
+
+    if(!phys->active[j])
+      taub=0;
+    
     if(sediments->TBMAX==1){
       sediments->Seditb[j]=taub;
     if(sediments->Seditbmax[j]<=taub)
@@ -570,7 +583,7 @@ void CalculateErosion(gridT *grid, physT *phys, propT *prop, int myproc) {
  * ----------------------------------------------------
  * based on settling velocity and SediConcentration
  */
-void CalculateDeposition(gridT *grid, physT *phys, int myproc) {
+void CalculateDeposition(gridT *grid, physT *phys, propT *prop,int myproc) {
   int j,k;
   for(j=0;j<grid->Nc;j++){
     for(k=0;k<sediments->Nsize;k++){
@@ -580,6 +593,11 @@ void CalculateDeposition(gridT *grid, physT *phys, int myproc) {
       } else {
         sediments->Deposition[k][j]=sediments->SediC[k][j][grid->Nk[j]-1]*sediments->Ws[k][j][grid->Nk[j]];
       }
+      if(prop->subgrid)
+        if(subgrid->Acceff[j][grid->Nk[j]-1]==0)
+          sediments->Deposition[k][j]=0;
+      if(!phys->active[j])
+        sediments->Deposition[k][j]=0;
     }
   }
 }
@@ -597,14 +615,16 @@ void CalculateDeposition(gridT *grid, physT *phys, int myproc) {
  */
 void BedChange(gridT *grid, physT *phys, propT *prop, int myproc) {
   int i,j,k;
-  REAL depotmp, thicktmp;
+  REAL depotmp, thicktmp,alpha;
 
   // update Deposition first
-  CalculateDeposition(grid,phys,myproc);
+  CalculateDeposition(grid,phys,prop,myproc);
 
   // update thickness
   // assume sum(Cbed) is constant=Drydensity
   for(j=0;j<grid->Nc;j++){
+    if(prop->subgrid)
+      alpha=subgrid->Aceff[j]/grid->Ac[j];
     depotmp=0;
     for(k=0;k<sediments->Nsize;k++)
       depotmp+=sediments->Deposition[k][j];
@@ -613,11 +633,11 @@ void BedChange(gridT *grid, physT *phys, propT *prop, int myproc) {
     thicktmp=sediments->Layerthickness[j][0];
     if(sediments->Nlayer>1){
       // here can use theta method
-      sediments->Layerthickness[j][0]+=sediments->bedInterval*prop->dt/sediments->Drydensity[0]*(-sediments->Erosiontotal[j][0]+sediments->Erosiontotal[j][1]+depotmp-sediments->Consolid[0]);
+      sediments->Layerthickness[j][0]+=sediments->bedInterval*prop->dt/sediments->Drydensity[0]*(alpha*(-sediments->Erosiontotal[j][0]+sediments->Erosiontotal[j][1]+depotmp)-sediments->Consolid[0]);
     } else {
       // if there is one layer, no consolidation and erosion[j][1];
       // because here we use deposition n+1 step, so there may be some error to make Layerthickness<0
-      sediments->Layerthickness[j][0]+=sediments->bedInterval*prop->dt/sediments->Drydensity[0]*(-sediments->Erosiontotal[j][0]+depotmp); 
+      sediments->Layerthickness[j][0]+=sediments->bedInterval*prop->dt/sediments->Drydensity[0]*(alpha*(-sediments->Erosiontotal[j][0]+depotmp)); 
     }
     
     if(sediments->Layerthickness[j][0]<=0){
@@ -627,23 +647,23 @@ void BedChange(gridT *grid, physT *phys, propT *prop, int myproc) {
     } else {
       for(k=0;k<sediments->Nsize;k++){
 	if(sediments->Nlayer>1){
-	  sediments->SediCbed[k][j][0]=(sediments->SediCbed[k][j][0]*thicktmp+sediments->bedInterval*prop->dt*(-sediments->SediCbed[k][j][0]/sediments->Drydensity[0]*(sediments->Consolid[0]+sediments->Erosiontotal[j][0])+sediments->SediCbed[k][j][1]/sediments->Drydensity[1]*sediments->Erosiontotal[j][1]+sediments->Deposition[k][j]))/sediments->Layerthickness[j][0];
+	  sediments->SediCbed[k][j][0]=(sediments->SediCbed[k][j][0]*thicktmp+sediments->bedInterval*prop->dt*(-sediments->SediCbed[k][j][0]/sediments->Drydensity[0]*(sediments->Consolid[0]+alpha*sediments->Erosiontotal[j][0])+sediments->SediCbed[k][j][1]/sediments->Drydensity[1]*alpha*sediments->Erosiontotal[j][1]+alpha*sediments->Deposition[k][j]))/sediments->Layerthickness[j][0];
 	} else {
-	  sediments->SediCbed[k][j][0]=(sediments->SediCbed[k][j][0]*thicktmp+sediments->bedInterval*prop->dt*(-sediments->SediCbed[k][j][0]/sediments->Drydensity[0]*(sediments->Erosiontotal[j][0])+sediments->Deposition[k][j]))/sediments->Layerthickness[j][0];
+	  sediments->SediCbed[k][j][0]=(sediments->SediCbed[k][j][0]*thicktmp+sediments->bedInterval*prop->dt*(-sediments->SediCbed[k][j][0]/sediments->Drydensity[0]*(alpha*sediments->Erosiontotal[j][0])+alpha*sediments->Deposition[k][j]))/sediments->Layerthickness[j][0];
 	}
       }
     }
     
     for(k=1;k<sediments->Nlayer-1;k++){
       thicktmp=sediments->Layerthickness[j][k];
-      sediments->Layerthickness[j][k]+=sediments->bedInterval*prop->dt/sediments->Drydensity[k]*(-sediments->Erosiontotal[j][k]+sediments->Erosiontotal[j][k+1]+sediments->Consolid[k-1]-sediments->Consolid[k]);
+      sediments->Layerthickness[j][k]+=sediments->bedInterval*prop->dt/sediments->Drydensity[k]*(alpha*(-sediments->Erosiontotal[j][k]+sediments->Erosiontotal[j][k+1])+sediments->Consolid[k-1]-sediments->Consolid[k]);
       if(sediments->Layerthickness[j][k]<=0){
         sediments->Layerthickness[j][k]=0;
         for(i=0;i<sediments->Nsize;i++)
           sediments->SediCbed[i][j][k]=0;
       } else {
         for(i=0;i<sediments->Nsize;i++){
-          sediments->SediCbed[i][j][k]=(sediments->SediCbed[i][j][k]*thicktmp+sediments->bedInterval*prop->dt*(-sediments->SediCbed[i][j][k]/sediments->Drydensity[k]*(sediments->Consolid[k]+sediments->Erosiontotal[j][k])+sediments->SediCbed[i][j][k+1]/sediments->Drydensity[k+1]*sediments->Erosiontotal[j][k+1]+sediments->Consolid[k-1]))/sediments->Layerthickness[j][k];
+          sediments->SediCbed[i][j][k]=(sediments->SediCbed[i][j][k]*thicktmp+sediments->bedInterval*prop->dt*(-sediments->SediCbed[i][j][k]/sediments->Drydensity[k]*(sediments->Consolid[k]+alpha*sediments->Erosiontotal[j][k])+sediments->SediCbed[i][j][k+1]/sediments->Drydensity[k+1]*alpha*sediments->Erosiontotal[j][k+1]+sediments->Consolid[k-1]))/sediments->Layerthickness[j][k];
         }
       }            
     }
@@ -659,7 +679,7 @@ void BedChange(gridT *grid, physT *phys, propT *prop, int myproc) {
  */
 void SedimentSource(REAL **A, REAL **B, gridT *grid, physT *phys, propT *prop,int Nosize,REAL theta) {
   int i, k, layertop;
-  REAL erosion, erosion_old;
+  REAL erosion, erosion_old,alpha;
 
   for(i=0;i<grid->Nc;i++) {
     for(k=grid->ctop[i];k<grid->Nk[i]-1;k++) {
@@ -667,8 +687,24 @@ void SedimentSource(REAL **A, REAL **B, gridT *grid, physT *phys, propT *prop,in
       A[i][k]=0;
     }
     //advection
-    B[i][grid->Nk[i]-1]=sediments->Ws[Nosize][i][grid->Nk[i]]/grid->dzz[i][k]; 
+    alpha=1.0;
+    if(prop->subgrid)
+    {
+      alpha=subgrid->Aceff[i]/subgrid->Acceff[i][grid->Nk[i]-1];
+      if(subgrid->Acceff[i][grid->Nk[i]-1]==0)
+        alpha=0;
+    }
+    
+    B[i][grid->Nk[i]-1]=alpha*sediments->Ws[Nosize][i][grid->Nk[i]]/grid->dzz[i][k]; 
     //erosion
+    alpha=1.0;
+    if(prop->subgrid)
+    {
+      alpha=subgrid->Aceff[i]/subgrid->Acceffold[i][grid->Nk[i]-1];
+      if(subgrid->Acceffold[i][grid->Nk[i]-1]==0)
+        alpha=0;
+    }
+
     layertop=0;
     erosion=0;
     erosion_old=0;
@@ -681,7 +717,7 @@ void SedimentSource(REAL **A, REAL **B, gridT *grid, physT *phys, propT *prop,in
     }
     erosion+=sediments->Erosiontotal[i][layertop];
     erosion_old+=sediments->Erosiontotal_old[i][layertop];
-    A[i][grid->Nk[i]-1]=((1-theta)*erosion_old+theta*erosion)*sediments->SediCbed[Nosize][i][layertop]/sediments->Drydensity[layertop]/grid->dzzold[i][grid->Nk[i]-1];
+    A[i][grid->Nk[i]-1]=alpha*((1-theta)*erosion_old+theta*erosion)*sediments->SediCbed[Nosize][i][layertop]/sediments->Drydensity[layertop]/grid->dzzold[i][grid->Nk[i]-1];
   }
 }
 
@@ -901,13 +937,9 @@ void ComputeSediments(gridT *grid, physT *phys, propT *prop, int myproc, int num
   CalculateErosion(grid,phys,prop,myproc);
   // calculate n+1 Sediment concentration field
   for(k=0;k<sediments->Nsize;k++){
-    
     SedimentSource(phys->wtmp,phys->uold,grid,phys,prop,k,prop->theta);
-    
     SedimentVerticalVelocity(grid,phys,k,1,myproc);
-    
     CalculateSediDiffusivity(grid,phys,k,myproc);
-    
     UpdateScalars(grid,phys,prop,sediments->Wnewsedi,sediments->SediC[k],sediments->boundary_sediC[k],phys->Cn_T,0,0,sediments->SediKappa_tv,prop->theta,phys->uold,phys->wtmp,NULL,NULL,0,0,comm,myproc,0,prop->TVDtemp);
     SedimentVerticalVelocity(grid,phys,k,-1,myproc);
     ISendRecvCellData3D(sediments->SediC[k],grid,myproc,comm);
@@ -915,6 +947,7 @@ void ComputeSediments(gridT *grid, physT *phys, propT *prop, int myproc, int num
   
   if(sediments->WSconstant==0)
     SettlingVelocity(grid,phys,prop,myproc);
+
   if(prop->n%sediments->bedInterval==0 && sediments->bedInterval>0)
     BedChange(grid,phys,prop,myproc);   
   // get the boundary value for the next time step

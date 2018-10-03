@@ -6,7 +6,6 @@
 #include "met.h"
 //#include "phys.h"
 #include "mynetcdf.h"
-#include "sendrecv.h"
 
 /* Private functions */
 void calcInterpWeights(gridT *grid, propT *prop, REAL *xo, REAL *yo, int Ns, int **index, REAL **klambda,int myproc);

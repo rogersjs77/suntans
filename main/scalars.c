@@ -12,6 +12,7 @@
 #include "scalars.h"
 #include "util.h"
 #include "tvd.h"
+#include "subgrid.h"
 #include "initialization.h"
 
 #define SMALL_CONSISTENCY 1e-5
@@ -39,8 +40,8 @@ void UpdateScalars(gridT *grid, physT *phys, propT *prop, REAL **wnew, REAL **sc
 {
   int i, iptr, j, jptr, ib, k, nf, ktop;
   int Nc=grid->Nc, normal, nc1, nc2, ne;
-  REAL df, dg, Ac, dt=prop->dt, fab, *a, *b, *c, *d, *ap, *am, *bd, *uflux, dznew, mass, *sp, *temp;
-  REAL smin, smax, div_local, div_da;
+  REAL df, dg, Ac, dt=prop->dt, fab, *a, *b, *c, *d, *ap, *am, *bd, dznew, mass, *sp, *temp;
+  REAL smin, smax, div_local, div_da, alpha,fac1,fac2,sum,sum1,sum2;
   int k1, k2, kmin, imin, kmax, imax, mincount, maxcount, allmincount, allmaxcount, flag;
 
   prop->TVD = TVDscheme;
@@ -70,10 +71,15 @@ void UpdateScalars(gridT *grid, physT *phys, propT *prop, REAL **wnew, REAL **sc
     for(k=0;k<grid->Nk[i];k++) 
       phys->stmp[i][k]=scal[i][k];
 
+  // theta method
+  fac1=theta;
+  fac2=1-theta;
+
+  
   // Add on boundary fluxes, using stmp2 as the temporary storage
   // variable
   //for(iptr=grid->celldist[0];iptr<grid->celldist[1];iptr++) {
-  for(iptr=grid->celldist[0];iptr<grid->celldist[1];iptr++) {
+  for(iptr=grid->celldist[0];iptr<grid->celldist[2];iptr++) {
     i = grid->cellp[iptr];
 
     for(k=grid->ctop[i];k<grid->Nk[i];k++)
@@ -94,12 +100,11 @@ void UpdateScalars(gridT *grid, physT *phys, propT *prop, REAL **wnew, REAL **sc
   }
 
   // Compute the scalar on the vertical faces (for horiz. advection)
-
   if(prop->TVD && prop->horiTVD)
     HorizontalFaceScalars(grid,phys,prop,scal,boundary_scal,prop->TVD,comm,myproc); 
 
   //for(iptr=grid->celldist[0];iptr<grid->celldist[1];iptr++) {
-  for(iptr=grid->celldist[0];iptr<grid->celldist[1];iptr++) {
+  for(iptr=grid->celldist[0];iptr<grid->celldist[2];iptr++) {
     i = grid->cellp[iptr];
     Ac = grid->Ac[i];
 
@@ -112,46 +117,96 @@ void UpdateScalars(gridT *grid, physT *phys, propT *prop, REAL **wnew, REAL **sc
       for(k=grid->ctop[i];k<=grid->ctopold[i];k++) 
         dznew+=grid->dzz[i][k];      
     }
-
     // These are the advective components of the tridiagonal
     // at the new time step.
     if(!(prop->TVD && prop->vertTVD))
-      for(k=0;k<grid->Nk[i]+1;k++) {
-        ap[k] = 0.5*(wnew[i][k]+fabs(wnew[i][k]));
-        am[k] = 0.5*(wnew[i][k]-fabs(wnew[i][k]));
+      for(k=0;k<grid->Nk[i]+1;k++) 
+      {
+        //add subgrid part
+        if(prop->subgrid)
+          alpha=subgrid->Acveff[i][k]/Ac;
+        else
+          alpha=1.0;
+
+        ap[k] = alpha*0.5*(wnew[i][k]+fabs(wnew[i][k]));
+        am[k] = alpha*0.5*(wnew[i][k]-fabs(wnew[i][k]));
+
       }
     else  // Compute the ap/am for TVD schemes
+    {
       GetApAm(ap,am,phys->wp,phys->wm,phys->Cp,phys->Cm,phys->rp,phys->rm,
-          wnew,grid->dzz,scal,i,grid->Nk[i],ktop,prop->dt,prop->TVD);
-
-    for(k=ktop+1;k<grid->Nk[i];k++) {
+          wnew,grid->dzz,scal,i,grid->Nk[i],ktop,prop->dt,prop->TVD);   
+   
+      for(k=0;k<grid->Nk[i]+1;k++) 
+      {
+        //add subgrid part
+        if(prop->subgrid)
+          alpha=subgrid->Acveff[i][k]/Ac;
+        else
+          alpha=1.0;
+        ap[k]= ap[k]*alpha;
+        am[k]= am[k]*alpha;
+      }
+         
+    }
+    
+    for(k=ktop+1;k<grid->Nk[i];k++) 
+    {
+      // add subgrid part
+      if(prop->subgrid)
+        alpha=subgrid->Acceff[i][k]/Ac;
+      else
+        alpha=1.0;
+    
       a[k-ktop]=theta*dt*am[k];
-      b[k-ktop]=grid->dzz[i][k]+theta*dt*(ap[k]-am[k+1]);
+      b[k-ktop]=alpha*grid->dzz[i][k]+theta*dt*(ap[k]-am[k+1]);
       c[k-ktop]=-theta*dt*ap[k+1];
     }
 
     // Top cell advection
-    a[0]=0;
-    b[0]=dznew-theta*dt*am[ktop+1];
-    c[0]=-theta*dt*ap[ktop+1];
+    if(prop->subgrid)
+      alpha=subgrid->Acceff[i][ktop]/Ac;
+    else
+      alpha=1.0;
 
+    a[0]=0;
+    b[0]=alpha*dznew-theta*dt*am[ktop+1];
+    c[0]=-theta*dt*ap[ktop+1];
+    
     // Bottom cell no-flux boundary condition for advection
     b[(grid->Nk[i]-1)-ktop]+=c[(grid->Nk[i]-1)-ktop];
 
     // Implicit vertical diffusion terms
     for(k=ktop+1;k<grid->Nk[i];k++)
-      bd[k]=(2.0*kappa+kappa_tv[i][k-1]+kappa_tv[i][k])/
+    {
+      if(prop->subgrid)
+        alpha=subgrid->Acveff[i][k]/Ac;
+      else
+        alpha=1.0;
+
+      bd[k]=alpha*(2.0*kappa+kappa_tv[i][k-1]+kappa_tv[i][k])/
         (grid->dzz[i][k-1]+grid->dzz[i][k]);
 
-    for(k=ktop+1;k<grid->Nk[i]-1;k++) {
+    }
+
+    for(k=ktop+1;k<grid->Nk[i]-1;k++) 
+    {
       a[k-ktop]-=theta*dt*bd[k];
       b[k-ktop]+=theta*dt*(bd[k]+bd[k+1]);
       c[k-ktop]-=theta*dt*bd[k+1];
     }
+
     if(src1)
       for(k=ktop;k<grid->Nk[i];k++)
-        b[k-ktop]+=grid->dzz[i][k]*src1[i][k]*theta*dt;
+      {
+        if(prop->subgrid)
+          alpha=subgrid->Acceff[i][k]/Ac;
+        else
+          alpha=1.0;
 
+        b[k-ktop]+=alpha*grid->dzz[i][k]*src1[i][k]*theta*dt;
+        
+      }
     // Diffusive fluxes only when more than 1 layer
     if(ktop<grid->Nk[i]-1) {
       // Top cell diffusion
@@ -162,46 +217,119 @@ void UpdateScalars(gridT *grid, physT *phys, propT *prop, REAL **wnew, REAL **sc
       a[(grid->Nk[i]-1)-ktop]-=theta*dt*bd[grid->Nk[i]-1];
       b[(grid->Nk[i]-1)-ktop]+=theta*dt*(bd[grid->Nk[i]-1]+2*alpha_bot*bd[grid->Nk[i]-1]);
     }
-
+  
     // Explicit part into source term d[] 
     for(k=ktop+1;k<grid->Nk[i];k++) 
-      d[k-ktop]=grid->dzzold[i][k]*phys->stmp[i][k];
-    if(src1)
-      for(k=ktop+1;k<grid->Nk[i];k++) 
-        d[k-ktop]-=src1[i][k]*(1-theta)*dt*grid->dzzold[i][k]*phys->stmp[i][k];
+    {
+      if(prop->subgrid)
+        alpha=subgrid->Acceffold[i][k]/Ac;
+      else 
+        alpha=1.0;
 
+      d[k-ktop]=alpha*grid->dzzold[i][k]*phys->stmp[i][k];
+    }
+
+    if(src1)
+    {
+      for(k=ktop+1;k<grid->Nk[i];k++) 
+      {
+        if(prop->subgrid)
+          alpha=subgrid->Acceffold[i][k]/Ac;
+        else 
+          alpha=1.0;
+        d[k-ktop]-=alpha*src1[i][k]*(1-theta)*dt*grid->dzzold[i][k]*phys->stmp[i][k];
+      }
+    }
     d[0]=0;
     if(grid->ctopold[i]<=grid->ctop[i]) {
       for(k=grid->ctopold[i];k<=grid->ctop[i];k++)
-        d[0]+=grid->dzzold[i][k]*phys->stmp[i][k];
+      {
+        if(prop->subgrid)
+          alpha=subgrid->Acceffold[i][k]/Ac;
+        else
+          alpha=1.0;
+        d[0]+=alpha*grid->dzzold[i][k]*phys->stmp[i][k];
+      }
+
       if(src1)
         for(k=grid->ctopold[i];k<=grid->ctop[i];k++)
-          d[0]-=src1[i][k]*(1-theta)*dt*grid->dzzold[i][k]*phys->stmp[i][k];
+        {
+          if(prop->subgrid)
+            alpha=subgrid->Acceffold[i][k]/Ac;
+          else
+            alpha=1.0;
+
+          d[0]-=alpha*src1[i][k]*(1-theta)*dt*grid->dzzold[i][k]*phys->stmp[i][k];
+        }
+
     } else {
-      d[0]=grid->dzzold[i][ktop]*phys->stmp[i][ktop];
+      if(prop->subgrid)
+        alpha=subgrid->Acceffold[i][ktop]/Ac;
+      else
+        alpha=1.0;      
+      
+      d[0]=alpha*grid->dzzold[i][ktop]*phys->stmp[i][ktop];
       if(src1)
-        d[0]-=src1[i][ktop]*(1-theta)*dt*grid->dzzold[i][ktop]*phys->stmp[i][k];
+        d[0]-=alpha*src1[i][ktop]*(1-theta)*dt*grid->dzzold[i][ktop]*phys->stmp[i][k];
     }
 
     // These are the advective components of the tridiagonal
     // that use the new velocity
     if(!(prop->TVD && prop->vertTVD))
       for(k=0;k<grid->Nk[i]+1;k++) {
-        ap[k] = 0.5*(phys->wtmp2[i][k]+fabs(phys->wtmp2[i][k]));
-        am[k] = 0.5*(phys->wtmp2[i][k]-fabs(phys->wtmp2[i][k]));
+        //add subgrid part
+        if(prop->subgrid)
+          alpha=subgrid->Acveffold[i][k]/Ac;
+        else
+          alpha=1.0;
+        ap[k] = alpha*0.5*(phys->wtmp2[i][k]+fabs(phys->wtmp2[i][k]));
+        am[k] = alpha*0.5*(phys->wtmp2[i][k]-fabs(phys->wtmp2[i][k]));
+
       }
     else // Compute the ap/am for TVD schemes
+    {
       GetApAm(ap,am,phys->wp,phys->wm,phys->Cp,phys->Cm,phys->rp,phys->rm,
           phys->wtmp2,grid->dzzold,phys->stmp,i,grid->Nk[i],ktop,prop->dt,prop->TVD);
-
+ 
+   
+      for(k=0;k<grid->Nk[i]+1;k++) 
+      {
+        //add subgrid part
+        if(prop->subgrid)
+          alpha=subgrid->Acveffold[i][k]/Ac;
+        else
+          alpha=1.0;
+        ap[k] = alpha*ap[k];
+        am[k] = alpha*am[k];
+      }     
+    }
+      
     // Explicit advection and diffusion
-    for(k=ktop+1;k<grid->Nk[i]-1;k++) 
-      d[k-ktop]-=(1-theta)*dt*(am[k]*phys->stmp[i][k-1]+
-          (ap[k]-am[k+1])*phys->stmp[i][k]-
-          ap[k+1]*phys->stmp[i][k+1])-
-        (1-theta)*dt*(bd[k]*phys->stmp[i][k-1]
-            -(bd[k]+bd[k+1])*phys->stmp[i][k]
-            +bd[k+1]*phys->stmp[i][k+1]);
+    if(!prop->subgrid){
+      for(k=ktop+1;k<grid->Nk[i]-1;k++) 
+        d[k-ktop]-=(1-theta)*dt*(am[k]*phys->stmp[i][k-1]+
+            (ap[k]-am[k+1])*phys->stmp[i][k]-
+            ap[k+1]*phys->stmp[i][k+1])-
+          (1-theta)*dt*(bd[k]*phys->stmp[i][k-1]
+              -(bd[k]+bd[k+1])*phys->stmp[i][k]
+              +bd[k+1]*phys->stmp[i][k+1]);
+    } else {
+      // recalculate bd by acveffold
+      for(k=ktop+1;k<grid->Nk[i];k++)
+      {
+        alpha=subgrid->Acveffold[i][k]/Ac;
+        bd[k]=alpha*(2.0*kappa+kappa_tv[i][k-1]+kappa_tv[i][k])/
+          (grid->dzz[i][k-1]+grid->dzz[i][k]);
+      }
+      for(k=ktop+1;k<grid->Nk[i]-1;k++) 
+        d[k-ktop]-=(1-theta)*dt*(am[k]*phys->stmp[i][k-1]+
+            (ap[k]-am[k+1])*phys->stmp[i][k]-
+            ap[k+1]*phys->stmp[i][k+1])-
+          (1-theta)*dt*(bd[k]*phys->stmp[i][k-1]
+              -(bd[k]+bd[k+1])*phys->stmp[i][k]
+              +bd[k+1]*phys->stmp[i][k+1]);
+    }
+
 
     if(ktop<grid->Nk[i]-1) {
       //Flux through bottom of top cell
@@ -210,6 +338,8 @@ void UpdateScalars(gridT *grid, physT *phys, propT *prop, REAL **wnew, REAL **sc
           ap[k+1]*phys->stmp[i][k+1])+
         (1-theta)*dt*(-(2*alpha_top*bd[k+1]+bd[k+1])*phys->stmp[i][k]+
             bd[k+1]*phys->stmp[i][k+1]);
+ 
+      // subgrid ??? 
       if(Ftop) d[0]+=dt*(1-alpha_top+2*alpha_top*bd[k+1])*Ftop[i];
 
       // Through top of bottom cell
@@ -218,13 +348,14 @@ void UpdateScalars(gridT *grid, physT *phys, propT *prop, REAL **wnew, REAL **sc
           ap[k]*phys->stmp[i][k])-
         (1-theta)*dt*(bd[k]*phys->stmp[i][k-1]-
             (bd[k]+2*alpha_bot*bd[k])*phys->stmp[i][k]);
+      // subgrid ???
       if(Fbot) d[k-ktop]+=dt*(-1+alpha_bot+2*alpha_bot*bd[k])*Fbot[i];
     }
 
     // First add on the source term from the previous time step.
     if(grid->ctop[i]<=grid->ctopold[i]) {
       for(k=grid->ctop[i];k<=grid->ctopold[i];k++) 
-        d[0]+=(1-fab)*Cn[i][grid->ctopold[i]]/(1+abs(grid->ctop[i]-grid->ctopold[i]));
+        d[0]+=(1-fab)*Cn[i][grid->ctopold[i]]/(1+fabs(grid->ctop[i]-grid->ctopold[i]));
       for(k=grid->ctopold[i]+1;k<grid->Nk[i];k++) 
         d[k-grid->ctopold[i]]+=(1-fab)*Cn[i][k];
     } else {
@@ -238,16 +369,23 @@ void UpdateScalars(gridT *grid, physT *phys, propT *prop, REAL **wnew, REAL **sc
       Cn[i][k]=0;
 
     if(src2)
-      for(k=grid->ctop[i];k<grid->Nk[i];k++) 
-        Cn[i][k-ktop]=dt*src2[i][k]*grid->dzzold[i][k];
+      for(k=grid->ctop[i];k<grid->Nk[i];k++)
+      { 
+        if(prop->subgrid)
+          alpha=subgrid->Acceffold[i][k]/Ac;
+        else 
+          alpha=1.0; 
+
+        Cn[i][k-ktop]=alpha*dt*src2[i][k]*grid->dzzold[i][k];
+      }
     else
       for(k=grid->ctop[i];k<grid->Nk[i];k++)
-        Cn[i][k]=0;
+        Cn[i][k]=0; 
 
     // Now create the source term for the current time step
     for(k=0;k<grid->Nk[i];k++)
       ap[k]=0;
-
+    
     for(nf=0;nf<grid->nfaces[i];nf++) {
       ne = grid->face[i*grid->maxfaces+nf];
       normal = grid->normal[i*grid->maxfaces+nf];
@@ -256,7 +394,8 @@ void UpdateScalars(gridT *grid, physT *phys, propT *prop, REAL **wnew, REAL **sc
       nc1 = grid->grad[2*ne];
       nc2 = grid->grad[2*ne+1];
       if(nc1==-1) nc1=nc2;
-      if(nc2==-1) {
+      if(nc2==-1) 
+      {
         nc2=nc1;
         if(boundary_scal && (grid->mark[ne]==2 || grid->mark[ne]==3))
           sp=phys->stmp2[nc1];
@@ -266,10 +405,15 @@ void UpdateScalars(gridT *grid, physT *phys, propT *prop, REAL **wnew, REAL **sc
         sp=phys->stmp[nc2];
 
       if(!(prop->TVD && prop->horiTVD)) {
-        for(k=0;k<grid->Nke[ne];k++) 
-          temp[k]=UpWind(phys->utmp2[ne][k],
-              phys->stmp[nc1][k],
-              sp[k]);
+        for(k=0;k<grid->Nke[ne];k++) {
+          
+          temp[k]=UpWind((fac2*phys->utmp2[ne][k]+fac1*phys->u[ne][k]),phys->stmp[nc1][k],sp[k]);
+          // new edit
+          if(k<grid->ctopold[nc1])
+            temp[k]=sp[k];
+          if(k<grid->ctopold[nc2])
+            temp[k]=phys->stmp[nc1][k];
+        }
       } else {
         for(k=0;k<grid->Nke[ne];k++) 
           if(phys->utmp2[ne][k]>0)
@@ -277,9 +421,9 @@ void UpdateScalars(gridT *grid, physT *phys, propT *prop, REAL **wnew, REAL **sc
           else
             temp[k]=phys->SfHm[ne][k];	    
       }
-
+      // this part don't need to be changed
       for(k=0;k<grid->Nke[ne];k++)
-        ap[k] += dt*df*normal/Ac*(theta*phys->u[ne][k]+(1-theta)*phys->utmp2[ne][k])
+        ap[k] += dt*df*normal/Ac*(fac1*phys->u[ne][k]+fac2*phys->utmp2[ne][k])
           *temp[k]*grid->dzf[ne][k];
     }
 
@@ -306,7 +450,7 @@ void UpdateScalars(gridT *grid, physT *phys, propT *prop, REAL **wnew, REAL **sc
     for(k=ktop+1;k<grid->Nk[i];k++)
       Cn[i][k]=ap[k];
     for(k=grid->ctop[i];k<=ktop;k++)
-      Cn[i][k]=ap[ktop]/(1+abs(grid->ctop[i]-ktop));
+      Cn[i][k]=ap[ktop]/(1+fabs(grid->ctop[i]-ktop));
 
     if(grid->Nk[i]-ktop>1) 
       TriSolve(a,b,c,d,&(scal[i][ktop]),grid->Nk[i]-ktop);
@@ -314,8 +458,21 @@ void UpdateScalars(gridT *grid, physT *phys, propT *prop, REAL **wnew, REAL **sc
       if(b[0]>0 && phys->active[i])
         scal[i][ktop]=d[0]/b[0];
       else 
-        scal[i][ktop]=0;
+        scal[i][ktop]=phys->stmp[i][ktop];
     }
+
+    if(grid->Nk[i]-ktop>1 && !phys->active[i]){
+      for(k=ktop;k<grid->Nk[i];k++)
+        scal[i][k]=phys->stmp[i][k];
+    }
+
+    // check concentration
+    if(prop->subgrid)
+      if(ktop!=grid->Nk[i]-1)
+        for(k=ktop;k<grid->Nk[i];k++){
+          if(subgrid->fluxn[i][k]>grid->dzz[i][k]*subgrid->Acceff[i][k])
+            scal[i][k]=phys->stmp[i][k];
+        }
 
     for(k=0;k<grid->ctop[i];k++)
       scal[i][k]=0;
@@ -354,7 +511,7 @@ void UpdateScalars(gridT *grid, physT *phys, propT *prop, REAL **wnew, REAL **sc
     }      
 
     //for(iptr=grid->celldist[0];iptr<grid->celldist[1];iptr++) {
-    for(iptr=grid->celldist[0];iptr<grid->celldist[1];iptr++) {
+    for(iptr=grid->celldist[0];iptr<grid->celldist[2];iptr++) {
       i = grid->cellp[iptr];
 
       flag=0;
@@ -370,18 +527,32 @@ void UpdateScalars(gridT *grid, physT *phys, propT *prop, REAL **wnew, REAL **sc
         div_da=0;
 
         for(k=0;k<grid->Nk[i];k++) {
-          div_da+=grid->Ac[i]*(grid->dzz[i][k]-grid->dzzold[i][k])/prop->dt;
+          if(prop->subgrid) 
+          {
+            div_da+=(subgrid->Acceff[i][k]*grid->dzz[i][k]-subgrid->Acceffold[i][k]
+              *grid->dzzold[i][k])/prop->dt;
+          } else
+            div_da+=grid->Ac[i]*(grid->dzz[i][k]-grid->dzzold[i][k])/prop->dt;
 
           div_local=0;
           for(nf=0;nf<grid->nfaces[i];nf++) {
             ne=grid->face[i*grid->maxfaces+nf];
-            div_local+=(theta*phys->u[ne][k]+(1-theta)*phys->utmp2[ne][k])
+            div_local+=(fac1*phys->u[ne][k]+fac2*phys->utmp2[ne][k])
               *grid->dzf[ne][k]*grid->normal[i*grid->maxfaces+nf]*grid->df[ne];
           }
           div_da+=div_local;
-          div_local+=grid->Ac[i]*(theta*(wnew[i][k]-wnew[i][k+1])+
-              (1-theta)*(phys->wtmp2[i][k]-phys->wtmp2[i][k+1]));
-
+          if(!prop->subgrid)
+          {
+            div_local+=grid->Ac[i]*(fac1*(wnew[i][k]-wnew[i][k+1])+fac2*(phys->wtmp2[i][k]-phys->wtmp2[i][k+1]));
+          } else {
+            div_local+=(fac1*(wnew[i][k]*subgrid->Acveff[i][k]-subgrid->Acveff[i][k+1]*wnew[i][k+1])+
+                fac2*(subgrid->Acveffold[i][k]*phys->wtmp2[i][k]
+                -subgrid->Acveffold[i][k]*phys->wtmp2[i][k+1]));                          
+          }
+          if(fabs(div_local)>1e-10){
+            printf("div_local %e i %d k %d\n",div_local,i,k);
+            printf("ctop %d xv %e yv %e h %e d %e\n", grid->ctop[i],grid->xv[i],grid->yv[i],phys->h[i],grid->dv[i]);
+          }
           if(k>=grid->ctop[i]) {
             if(fabs(div_local)>SMALL_CONSISTENCY && grid->dzz[imin][0]>DRYCELLHEIGHT) 
               printf("Step: %d, proc: %d, locally-divergent at %d, %d, div=%e\n",
@@ -389,8 +560,8 @@ void UpdateScalars(gridT *grid, physT *phys, propT *prop, REAL **wnew, REAL **sc
           }
         }
         if(fabs(div_da)>SMALL_CONSISTENCY && phys->h[i]+grid->dv[i]>DRYCELLHEIGHT)
-          printf("Step: %d, proc: %d, Depth-Ave divergent at i=%d, div=%e\n",
-              prop->n,myproc,i,div_da);
+          printf("i %d  Step: %d, proc: %d, Depth-Ave divergent at i=%d, div=%e\n",
+              i,prop->n,myproc,i,div_da);
       }
     }
 
@@ -399,12 +570,13 @@ void UpdateScalars(gridT *grid, physT *phys, propT *prop, REAL **wnew, REAL **sc
     smin=INFTY;
     smax=-INFTY;
     //for(iptr=grid->celldist[0];iptr<grid->celldist[1];iptr++) {
-    for(iptr=grid->celldist[0];iptr<grid->celldist[1];iptr++) {
+    for(iptr=grid->celldist[0];iptr<grid->celldist[2];iptr++) {
       i = grid->cellp[iptr];
 
       flag=0;
       for(nf=0;nf<grid->nfaces[i];nf++) {
-        if(grid->mark[grid->face[i*grid->maxfaces+nf]]==2 || grid->mark[grid->face[i*grid->maxfaces+nf]]==3) {
+        if(grid->mark[grid->face[i*grid->maxfaces+nf]]==2 || grid->mark[grid->face[i*grid->maxfaces+nf]]==3) 
+        {
           flag=1;
           break;
         }

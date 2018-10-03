@@ -12,6 +12,8 @@
 #include "met.h"
 #include "tvd.h"
 #include "age.h"
+#include "physio.h"
+//#include "sources.h"
 
 /*
  * Main averages variable struct.
@@ -36,6 +38,18 @@ typedef struct _averageT {
   REAL **U_F; // volume flux
   REAL **s_F; //Salt flux @ face
   REAL **T_F; // Temperature flux @ faceL
+
+  // average velocities
+  REAL **u; // u at faces
+  REAL **u_avg; // running average of u at faces
+  // REAL ***u_store; // stored in memory for averaging
+
+  // average wave velocity variance 
+  // REAL **uw_var; // variance of baroclinic u at faces
+  // REAL **uw_avg; // average of baroclinic u at faces
+  // REAL **uw_var_avg; // running average of baroclinic u at faces
+  // REAL ***uw_var_store; // stored in memory for averaging
+  // REAL alphaw; // wave transfer coefficient  
 
   // Depth-integrated T/S (for budgets)
   REAL *s_dz;
@@ -73,10 +87,11 @@ typedef struct _averageT {
 
 /* *** Public Functions *** */
 void AllocateAverageVariables(gridT *grid, averageT **average, propT *prop);
-void ZeroAverageVariables(gridT *grid, averageT *average, propT *prop);
+void ZeroAverageVariables(gridT *grid, physT *phys, averageT *average, propT *prop, MPI_Comm comm,int myproc);
 void UpdateAverageVariables(gridT *grid, averageT *average, physT *phys, metT *met, propT *prop, MPI_Comm comm, int myproc);
 void UpdateAverageScalars(gridT *grid, averageT *average, physT *phys, metT *met, propT *prop,MPI_Comm comm, int myproc);
 void ComputeAverageVariables(gridT *grid, averageT *average, physT *phys, metT *met, int netaverage, propT *prop);
 void SendRecvAverages(propT *prop, gridT *grid, averageT *average, MPI_Comm comm, int myproc);
+void ReadAverageVariables(gridT *grid, propT *prop, physT *phys, averageT *average, int myproc, MPI_Comm comm);
 
 #endif

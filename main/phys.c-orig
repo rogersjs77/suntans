@@ -32,7 +32,6 @@
 #include "merge.h"
 #include "sediments.h"
 #include "subgrid.h"
-#include "averages.h" 
 
 /*
  * Private Function declarations.
@@ -76,7 +75,7 @@ static void Continuity(REAL **w, gridT *grid, physT *phys, propT *prop);
 void Continuity(REAL **w, gridT *grid, physT *phys, propT *prop);
 static void EddyViscosity(gridT *grid, physT *phys, propT *prop, REAL **wnew, 
     MPI_Comm comm, int myproc);
-static void HorizontalSource(gridT *grid, physT *phys, propT *prop, averageT *average,
+static void HorizontalSource(gridT *grid, physT *phys, propT *prop,
     int myproc, int numprocs, MPI_Comm comm);
 static void StoreVariables(gridT *grid, physT *phys);
 static void NewCells(gridT *grid, physT *phys, propT *prop);
@@ -542,26 +541,24 @@ void InitializePhysicalVariables(gridT *grid, physT *phys, propT *prop, int mypr
 {
   int i, j, k, ktop, Nc=grid->Nc;
   REAL z, *stmp;
-  REAL *ncscratch, *ncscratch2;
-  int Nci, Nki, Nei,T0;
+  REAL *ncscratch;
+  int Nci, Nki, T0;
 
 
   prop->nstart=0;
-  prop->restartNC=0;
-  prop->restartAvgNC=0;
   
   // Initialise the netcdf time
   prop->toffSet = getToffSet(prop->basetime,prop->starttime);
   prop->nctime = prop->toffSet*86400.0 + prop->nstart*prop->dt;
 
   if (prop->readinitialnc>0){
-    ReadInitialNCcoord(prop,grid,&Nci,&Nki,&Nei,&T0,myproc);
+    ReadInitialNCcoord(prop,grid,&Nci,&Nki,&T0,myproc);
 
-    //printf("myproc: %d, Nci: %d, Nki: %d, T0: %d\n",myproc,Nci,Nki,T0);
+    printf("myproc: %d, Nci: %d, Nki: %d, T0: %d\n",myproc,Nci,Nki,T0);
 
     // Initialise a scratch variable for reading arrays
     ncscratch = (REAL *)SunMalloc(Nki*Nci*sizeof(REAL),"InitializePhysicalVariables");
-   
+
   }
 
   // Need to update the vertical grid and fix any cells in which
@@ -633,8 +630,8 @@ void InitializePhysicalVariables(gridT *grid, physT *phys, propT *prop, int mypr
       z = 0;
       for(k=grid->ctop[i];k<grid->Nk[i];k++) {
         z-=grid->dz[k]/2;
-        phys->s[i][k]=ReturnSalinity(grid->xv[i],grid->yv[i],z,prop);
-        phys->s0[i][k]=ReturnSalinity(grid->xv[i],grid->yv[i],z,prop);
+        phys->s[i][k]=ReturnSalinity(grid->xv[i],grid->yv[i],z);
+        phys->s0[i][k]=ReturnSalinity(grid->xv[i],grid->yv[i],z);
         z-=grid->dz[k]/2;
       }
     }
@@ -663,25 +660,15 @@ void InitializePhysicalVariables(gridT *grid, physT *phys, propT *prop, int mypr
       }
     }
   }
-  // Free the scratch array
-  if (prop->readinitialnc>0){
-      SunFree(ncscratch,Nki*Nci*sizeof(REAL),"InitializePhyiscalVariables");
-  }
  
   // Initialize the velocity field 
-  if(prop->readinitialnc && prop->initialUNC > 0){ //load u from initial cond file
-     ncscratch2 = (REAL *)SunMalloc(Nki*Nei*sizeof(REAL),"InitializePhysicalVariables");
-     ReturnHorizontalVelocityNC(prop,phys,grid,ncscratch2,Nei,Nki,T0,myproc);
-     SunFree(ncscratch2,Nki*Nei*sizeof(REAL),"InitializePhyiscalVariables");
-  }else{ // set velocity to idealized
-    for(j=0;j<grid->Ne;j++) {
-      z = 0;
-      for(k=0;k<grid->Nke[j];k++) {
-        z-=grid->dz[k]/2;
-        phys->u[j][k]=ReturnHorizontalVelocity(
-            grid->xe[j],grid->ye[j],grid->n1[j],grid->n2[j],z);
-        z-=grid->dz[k]/2;
-      }
+  for(j=0;j<grid->Ne;j++) {
+    z = 0;
+    for(k=0;k<grid->Nke[j];k++) {
+      z-=grid->dz[k]/2;
+      phys->u[j][k]=ReturnHorizontalVelocity(
+          grid->xe[j],grid->ye[j],grid->n1[j],grid->n2[j],z);
+      z-=grid->dz[k]/2;
     }
   }
   
@@ -743,7 +730,9 @@ void InitializePhysicalVariables(gridT *grid, physT *phys, propT *prop, int mypr
       }
     }
   }
-
+  // Free the scratch array
+  if (prop->readinitialnc>0)
+      SunFree(ncscratch,Nki*Nci*sizeof(REAL),"InitializePhyiscalVariables");
       //Close the initial condition netcdf file
       //MPI_NCClose(prop->initialNCfileID );
 }
@@ -1263,8 +1252,6 @@ void Solve(gridT *grid, physT *phys, propT *prop, int myproc, int numprocs, MPI_
     InitBoundaryData(prop, grid, myproc, comm);
   }
 
-  // Initialize xmid, ymid calcs
-  ComputeXYmid(grid, prop, myproc, numprocs, comm);
   // get the boundary velocities (boundaries.c)
   BoundaryVelocities(grid,phys,prop,myproc, comm); 
   // get the openboundary flux (boundaries.c)
@@ -1302,7 +1289,6 @@ void Solve(gridT *grid, physT *phys, propT *prop, int myproc, int numprocs, MPI_
   // Initialize the Sponge Layer
   InitSponge(grid,myproc);
 
-
   
   // Initialise the meteorological forcing input fields
     if(prop->metmodel>0){
@@ -1338,10 +1324,7 @@ void Solve(gridT *grid, physT *phys, propT *prop, int myproc, int numprocs, MPI_
   // Initialise the average arrays and netcdf file
   if(prop->calcaverage>0){
     AllocateAverageVariables(grid,&average,prop);
-    ZeroAverageVariables(grid,phys,average,prop,comm,myproc);
-    // sets u_avg=0, or reads in restartfile
-    ReadAverageVariables(grid,prop,phys,average,myproc,comm);
-
+    ZeroAverageVariables(grid,average,prop);
     if(prop->mergeArrays==0)
     	InitialiseAverageNCugrid(prop, grid, average, myproc);
   }
@@ -1404,7 +1387,7 @@ void Solve(gridT *grid, physT *phys, propT *prop, int myproc, int numprocs, MPI_
        * 4) Horizontal and vertical advection of horizontal momentum with AB2
        * 5) Horizontal laminar+turbulent diffusion of horizontal momentum
        */
-      HorizontalSource(grid,phys,prop,average,myproc,numprocs,comm);
+      HorizontalSource(grid,phys,prop,myproc,numprocs,comm);
       // compute the time required for the source
       t_source+=Timer()-t0;
 
@@ -1588,11 +1571,6 @@ void Solve(gridT *grid, physT *phys, propT *prop, int myproc, int numprocs, MPI_
       ISendRecvCellData3D(phys->vc,grid,myproc,comm);
     }
 
-    // update u with Kurt forcing
-    KurtSource(grid,phys,prop,comm);
-    // redo compute uc and vc
-    ComputeUC(phys->uc, phys->vc, phys,grid, myproc, prop->interp,prop->subgrid);
-
     // Adjust the velocity field in the new cells if the newcells variable is set 
     // to 1 in suntans.dat.  Once this is done, send the interprocessor 
     // u-velocities to the neighboring processors.
@@ -1619,24 +1597,17 @@ void Solve(gridT *grid, physT *phys, propT *prop, int myproc, int numprocs, MPI_
       if(prop->subgrid)
         OutputSubgridVariables(grid, prop, myproc, numprocs, comm);
     }else {
-
-      // Write to binary
-      // if (prop->ntoutStore>0){
-      //   OutputPhysicalVariables(grid,phys,prop,myproc,numprocs,blowup,comm);
-      // }
       // Output data to netcdf
 	if(prop->mergeArrays){
-	    WriteOutputNCmerge(prop, grid, phys, met, average, blowup,numprocs,myproc,comm);
+	    WriteOutputNCmerge(prop, grid, phys, met, blowup,numprocs,myproc,comm);
 	}else{
-	    WriteOutputNC(prop, grid, phys, met, average, blowup, myproc);
+	    WriteOutputNC(prop, grid, phys, met, blowup, myproc);
 	}
     }
     // Output the average arrays
     if(prop->calcaverage){
     	if(prop->mergeArrays){
-        //printf("start write avg NC merge\n");
 	    WriteAverageNCmerge(prop,grid,average,phys,met,blowup,numprocs,comm,myproc);
-      //printf("finish write avg NC merge\n");
 	}else{
 	    WriteAverageNC(prop,grid,average,phys,met,blowup,comm,myproc);
 	}
@@ -1724,7 +1695,7 @@ static void StoreVariables(gridT *grid, physT *phys) {
  * the upper cell.
  *
  */
-static void HorizontalSource(gridT *grid, physT *phys, propT *prop, averageT *average,
+static void HorizontalSource(gridT *grid, physT *phys, propT *prop,
     int myproc, int numprocs, MPI_Comm comm) {
   int i, ib, iptr, boundary_index, nf, j, jptr, k, nc, nc1, nc2, ne, 
   k0, kmin, kmax;
@@ -1825,7 +1796,7 @@ static void HorizontalSource(gridT *grid, physT *phys, propT *prop, averageT *av
   // Add on a momentum source to momentum equation
   // currently covers the sponge layer and can be used for Coriolis for the 
   // 2D problem
-  MomentumSource(phys->utmp,grid,phys,prop,average,bound);
+  MomentumSource(phys->utmp,grid,phys,prop);
 
   // 3D Coriolis terms
   // note that this uses linear interpolation to the faces from the cell centers
@@ -2271,11 +2242,8 @@ static void HorizontalSource(gridT *grid, physT *phys, propT *prop, averageT *av
     if(nc2==-1) nc2=nc1;
 
     // Note that dgf==dg only when the cells are orthogonal!
-    // commented out for periodic boundary conditions
-    //    def1 = grid->def[nc1*grid->maxfaces+grid->gradf[2*j]];
-    //    def2 = grid->def[nc2*grid->maxfaces+grid->gradf[2*j+1]];
-    def1 = 0.5*grid->dg[j];
-    def2 = 0.5*grid->dg[j];
+    def1 = grid->def[nc1*grid->maxfaces+grid->gradf[2*j]];
+    def2 = grid->def[nc2*grid->maxfaces+grid->gradf[2*j+1]];
     dgf = def1+def2;
 
     if(grid->ctop[nc1]>grid->ctop[nc2])
@@ -4645,14 +4613,14 @@ static void ComputeUCPerot(REAL **u, REAL **uc, REAL **vc, REAL *h, int subgridm
             //alpha=grid->dzf[ne][k]/grid->dzz[n][k]*grid->Ac[n]/subgrid->Acceff[n][k];
           //else
             alpha=grid->dzf[ne][k]*grid->Ac[n]/V;
-        // else
-        //   if(V<=grid->dzz[n][k]*grid->Ac[n]){
-        //     alpha=grid->dzf[ne][k]/grid->dzz[n][k];
-        //   }else
-        //     alpha=grid->dzf[ne][k]*grid->Ac[n]/V;
+        else
+          if(V<=grid->dzz[n][k]*grid->Ac[n]){
+            alpha=grid->dzf[ne][k]/grid->dzz[n][k];
+          }else
+            alpha=grid->dzf[ne][k]*grid->Ac[n]/V;
 
-        // if(dry)
-        //   alpha=1;
+        if(dry)
+          alpha=1;
 
         if(!(grid->smoothbot) || k<grid->Nke[ne]){
           uc[n][k]+=alpha*u[ne][k]*grid->n1[ne]*grid->def[n*grid->maxfaces+nf]*grid->df[ne];
@@ -4863,10 +4831,8 @@ void ReadProperties(propT **prop, gridT *grid, int myproc)
   (*prop)->calcage = MPI_GetValue(DATAFILE,"calcage","ReadProperties",myproc);
   (*prop)->agemethod = MPI_GetValue(DATAFILE,"agemethod","ReadProperties",myproc);
   (*prop)->calcaverage = MPI_GetValue(DATAFILE,"calcaverage","ReadProperties",myproc);
-  if ((*prop)->calcaverage){
-    (*prop)->ntaverage = (int)MPI_GetValue(DATAFILE,"ntaverage","ReadProperties",myproc);
-    (*prop)->ntaveragestore = (int)MPI_GetValue(DATAFILE,"ntaveragestore","ReadProperties",myproc);
-  }
+  if ((*prop)->calcaverage)
+      (*prop)->ntaverage = (int)MPI_GetValue(DATAFILE,"ntaverage","ReadProperties",myproc);
   (*prop)->latitude = MPI_GetValue(DATAFILE,"latitude","ReadProperties",myproc);
   (*prop)->gmtoffset = MPI_GetValue(DATAFILE,"gmtoffset","ReadProperties",myproc);
   (*prop)->metmodel = (int)MPI_GetValue(DATAFILE,"metmodel","ReadProperties",myproc);
@@ -4877,39 +4843,10 @@ void ReadProperties(propT **prop, gridT *grid, int myproc)
   (*prop)->outputNetcdf = (int)MPI_GetValue(DATAFILE,"outputNetcdf","ReadProperties",myproc);
   (*prop)->netcdfBdy = (int)MPI_GetValue(DATAFILE,"netcdfBdy","ReadProperties",myproc);
   (*prop)->readinitialnc = (int)MPI_GetValue(DATAFILE,"readinitialnc","ReadProperties",myproc);
-  (*prop)->initialUNC = (int)MPI_GetValue(DATAFILE,"initialUNC","ReadProperties",myproc);
   (*prop)->Lsw = MPI_GetValue(DATAFILE,"Lsw","ReadProperties",myproc);
   (*prop)->Cda = MPI_GetValue(DATAFILE,"Cda","ReadProperties",myproc);
   (*prop)->Ce = MPI_GetValue(DATAFILE,"Ce","ReadProperties",myproc);
   (*prop)->Ch = MPI_GetValue(DATAFILE,"Ch","ReadProperties",myproc);
-  // idealized wave forcing variables
-  (*prop)->wave_nesting = MPI_GetValue(DATAFILE,"wave_nesting","ReadProperties",myproc);
-  if ((*prop)->wave_nesting>0){
-    (*prop)->TauL = MPI_GetValue(DATAFILE,"TauL","ReadProperties",myproc);
-    (*prop)->TM2 = MPI_GetValue(DATAFILE,"TM2","ReadProperties",myproc);
-    (*prop)->ULm = MPI_GetValue(DATAFILE,"ULm","ReadProperties",myproc);
-    (*prop)->ULz = MPI_GetValue(DATAFILE,"ULz","ReadProperties",myproc);
-    (*prop)->VLm = MPI_GetValue(DATAFILE,"VLm","ReadProperties",myproc);
-    (*prop)->VLz = MPI_GetValue(DATAFILE,"VLz","ReadProperties",myproc);
-    (*prop)->UHtide = MPI_GetValue(DATAFILE,"UHtide","ReadProperties",myproc);
-    (*prop)->Uiw = MPI_GetValue(DATAFILE,"Uiw","ReadProperties",myproc);
-    (*prop)->Phitide = MPI_GetValue(DATAFILE,"Phitide","ReadProperties",myproc);
-    (*prop)->Phiiw = MPI_GetValue(DATAFILE,"Phiiw","ReadProperties",myproc);
-    (*prop)->dW = MPI_GetValue(DATAFILE,"dW","ReadProperties",myproc);
-    (*prop)->Fhat_x = MPI_GetValue(DATAFILE,"Fhat_x","ReadProperties",myproc);
-    (*prop)->Fhat_y = MPI_GetValue(DATAFILE,"Fhat_y","ReadProperties",myproc);
-    (*prop)->alpha1 = MPI_GetValue(DATAFILE,"alpha1","ReadProperties",myproc);
-    (*prop)->alpha2 = MPI_GetValue(DATAFILE,"alpha2","ReadProperties",myproc);
-    (*prop)->delta = MPI_GetValue(DATAFILE,"delta","ReadProperties",myproc);
-    (*prop)->drho = MPI_GetValue(DATAFILE,"drho","ReadProperties",myproc);
-    (*prop)->h2 = MPI_GetValue(DATAFILE,"h2","ReadProperties",myproc);
-    (*prop)->D = MPI_GetValue(DATAFILE,"D","ReadProperties",myproc);
-    (*prop)->lambda = MPI_GetValue(DATAFILE,"lambda","ReadProperties",myproc);
-    (*prop)->interp_sponge = MPI_GetValue(DATAFILE,"interp_sponge","ReadProperties",myproc);
-    (*prop)->lowfreq_nudging = MPI_GetValue(DATAFILE,"lowfreq_nudging","ReadProperties",myproc);
-  }
-
-
   if((*prop)->outputNetcdf > 0 || (*prop)->netcdfBdy > 0 || (*prop)->readinitialnc > 0){ 
       MPI_GetString((*prop)->starttime,DATAFILE,"starttime","ReadProperties",myproc);
       MPI_GetString((*prop)->basetime,DATAFILE,"basetime","ReadProperties",myproc);
@@ -4983,11 +4920,9 @@ REAL InterpToFace(int j, int k, REAL **phi, REAL **u, gridT *grid) {
   nc1 = grid->grad[2*j];
   nc2 = grid->grad[2*j+1];
   Dj = grid->dg[j];
-  // commented out for periodic boundary conditions
-  // def1 = sqrt(pow(grid->xv[nc1]-grid->xe[j],2)+
-  //     pow(grid->yv[nc1]-grid->ye[j],2));
-  // def2 = Dj-def1;
-  def1=def2=Dj/2;
+  def1 = sqrt(pow(grid->xv[nc1]-grid->xe[j],2)+
+      pow(grid->yv[nc1]-grid->ye[j],2));
+  def2 = Dj-def1;
 
   if(def1==0 || def2==0) {
     return UpWind(u[j][k],phi[nc1][k],phi[nc2][k]);
@@ -5015,11 +4950,9 @@ static REAL UFaceFlux(int j, int k, REAL **phi, REAL **u, gridT *grid, REAL dt, 
   if(nc1==-1) nc1=nc2;
   if(nc2==-1) nc2=nc1;
   Dj = grid->dg[j];
-  // commented out for periodic boundary conditions
-  // def1 = sqrt(pow(grid->xv[nc1]-grid->xe[j],2)+
-  //     pow(grid->yv[nc1]-grid->ye[j],2));
-  // def2 = Dj-def1;
-  def1=def2=Dj/2;
+  def1 = sqrt(pow(grid->xv[nc1]-grid->xe[j],2)+
+      pow(grid->yv[nc1]-grid->ye[j],2));
+  def2 = Dj-def1;
 
   if(method==4) C = u[j][k]*dt/Dj;
 

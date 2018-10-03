@@ -689,10 +689,9 @@ static void CreateFaceArray(int *grad, int *gradf, int *neigh, int *face, int *n
   for(n=0;n<Nc;n++)
     for(nf=0;nf<nfaces[n];nf++)
       face[n*maxfaces+nf]=-1; 
-  // commented out for periodic boundary conditions//
-  // for(n=0;n<Ne;n++)
-  //   for(j=0;j<2;j++)
-  //     gradf[2*n+j]=-1;
+  for(n=0;n<Ne;n++)
+    for(j=0;j<2;j++)
+      gradf[2*n+j]=-1;
 
   // over each edge
   for(n=0;n<Ne;n++) {
@@ -1069,12 +1068,9 @@ void Connectivity(gridT *grid, int myproc)
   // printf("faces is %d", grid->face[99]);
   // reorder the cell points so that they have structure for use in interpolation
   // now reordercellpoints may reorder face, so gradf should be reordered
-
-// This is removed for periodic boundary conditions
-  // if(grid->maxfaces==3)
-  //   ReorderCellPoints(grid->face, grid->edges, grid->cells, grid->nfaces, grid->maxfaces, grid->Nc);
+  if(grid->maxfaces==3)
+    ReorderCellPoints(grid->face, grid->edges, grid->cells, grid->nfaces, grid->maxfaces, grid->Nc);
   // reorder gradf
-
   Reordergradf(grid->face, grid->grad, grid->gradf, grid->nfaces, grid->maxfaces, grid->Nc, grid->Ne);
 
   // create dot product of unique normal with outward normal
@@ -2051,8 +2047,7 @@ static void ReOrder(gridT *grid)
     grad1=grid->grad[2*n];
     grad2=grid->grad[2*n+1];
     enei=grad1+grad2-2;
-    // changed to nf<enei for periodic boundary conditions //
-    for(nf=0;nf<enei;nf++) 
+    for(nf=0;nf=enei;nf++) 
       tmp[2*(grid->maxfaces-1)*n+nf]=grid->eneigh[2*(grid->maxfaces-1)*n+nf];
   for(n=0;n<Ne;n++)
     grad1=grid->grad[2*n];
@@ -3312,7 +3307,7 @@ static int IsNeighborGlobalByNode(int cell, gridT *maingrid,
 static void Geometry(gridT *maingrid, gridT **grid, int myproc)
 {
   int n, nf, npc, ne, k, j, Nc=(*grid)->Nc, Ne=(*grid)->Ne, Np=(*grid)->Np, p1, p2,grad1,grad2,enei;
-  REAL xt[(*grid)->maxfaces], yt[(*grid)->maxfaces], xc, yc, den, R0, tx, ty, tmag, xdott, nx1, nx2, ny1, ny2;
+  REAL xt[(*grid)->maxfaces], yt[(*grid)->maxfaces], xc, yc, den, R0, tx, ty, tmag, xdott;
   REAL dx, dy, tmp_mag; // MR
   
   (*grid)->Ac = (REAL *)SunMalloc(Nc*sizeof(REAL),"Geometry");
@@ -3525,55 +3520,21 @@ static void Geometry(gridT *maingrid, gridT **grid, int myproc)
   if(myproc==0 && VERBOSE>2) printf("\t\tComputing n1, n2, and dg..\n");
   // for each edge
   for(n=0;n<Ne;n++) {
-    /////////////periodic BC//////////////
+    // if both cells are not ghost cells 
     if((*grid)->grad[2*n]!=-1 && (*grid)->grad[2*n+1]!=-1) {
-      nx1 = (*grid)->xv[(*grid)->grad[2*n]]-(*grid)->xe[n];
-      ny1 = (*grid)->yv[(*grid)->grad[2*n]]-(*grid)->ye[n];
-
-      nx2 = (*grid)->xv[(*grid)->grad[2*n+1]]-(*grid)->xe[n];
-      ny2 = (*grid)->yv[(*grid)->grad[2*n+1]]-(*grid)->ye[n];
-      
-      // Need to account for the possibility of a periodic edge that has both Voronoi points
-      // on the same side.  In this case choose the smaller of the two to determine the Voronoi
-      // distance.
-      if((nx1*nx2+ny1*ny2)>0) {
-  if(nx1*nx1+ny1*ny1 <= nx2*nx2+ny2*ny2) {
-    (*grid)->n1[n] = nx1;
-    (*grid)->n2[n] = ny1;
-  } else {
-    (*grid)->n1[n] = -nx2;
-    (*grid)->n2[n] = -ny2;
-  }
-  (*grid)->dg[n] = sqrt(pow((*grid)->n1[n],2)+pow((*grid)->n2[n],2));
-  (*grid)->n1[n] = (*grid)->n1[n]/(*grid)->dg[n];
-  (*grid)->n2[n] = (*grid)->n2[n]/(*grid)->dg[n];
-  (*grid)->dg[n]*=2;
-      } else {
-  (*grid)->n1[n] = nx1-nx2;
-  (*grid)->n2[n] = ny1-ny2;
-  (*grid)->dg[n] = sqrt(pow((*grid)->n1[n],2)+pow((*grid)->n2[n],2));
-  (*grid)->n1[n] = (*grid)->n1[n]/(*grid)->dg[n];
-  (*grid)->n2[n] = (*grid)->n2[n]/(*grid)->dg[n];
+      (*grid)->n1[n] = (*grid)->xv[(*grid)->grad[2*n]]-(*grid)->xv[(*grid)->grad[2*n+1]];
+      (*grid)->n2[n] = (*grid)->yv[(*grid)->grad[2*n]]-(*grid)->yv[(*grid)->grad[2*n+1]];
+      (*grid)->dg[n] = sqrt(pow((*grid)->n1[n],2)+pow((*grid)->n2[n],2));
+      (*grid)->n1[n] = (*grid)->n1[n]/(*grid)->dg[n];
+      (*grid)->n2[n] = (*grid)->n2[n]/(*grid)->dg[n];
+      if(((*grid)->xv[(*grid)->grad[2*n]]==
+            (*grid)->xv[(*grid)->grad[2*n+1]]) &&
+          ((*grid)->yv[(*grid)->grad[2*n]]==
+           (*grid)->yv[(*grid)->grad[2*n+1]])) {
+        printf("Coincident Voronoi points on edge %d (%d,%d)!\n",n,
+            (*grid)->grad[2*n],(*grid)->grad[2*n+1]);
       }
     }
-////////////end periodic BC///////////////
-
-    // // comment out for periodic bc
-    // // if both cells are not ghost cells 
-    // if((*grid)->grad[2*n]!=-1 && (*grid)->grad[2*n+1]!=-1) {
-    //   (*grid)->n1[n] = (*grid)->xv[(*grid)->grad[2*n]]-(*grid)->xv[(*grid)->grad[2*n+1]];
-    //   (*grid)->n2[n] = (*grid)->yv[(*grid)->grad[2*n]]-(*grid)->yv[(*grid)->grad[2*n+1]];
-    //   (*grid)->dg[n] = sqrt(pow((*grid)->n1[n],2)+pow((*grid)->n2[n],2));
-    //   (*grid)->n1[n] = (*grid)->n1[n]/(*grid)->dg[n];
-    //   (*grid)->n2[n] = (*grid)->n2[n]/(*grid)->dg[n];
-    //   if(((*grid)->xv[(*grid)->grad[2*n]]==
-    //         (*grid)->xv[(*grid)->grad[2*n+1]]) &&
-    //       ((*grid)->yv[(*grid)->grad[2*n]]==
-    //        (*grid)->yv[(*grid)->grad[2*n+1]])) {
-    //     printf("Coincident Voronoi points on edge %d (%d,%d)!\n",n,
-    //         (*grid)->grad[2*n],(*grid)->grad[2*n+1]);
-    //   }
-    // }
     else {
       xc = (*grid)->xe[n];
       yc = (*grid)->ye[n];
@@ -3608,10 +3569,6 @@ static void Geometry(gridT *maingrid, gridT **grid, int myproc)
   for(n=0;n<Nc;n++) {
     for(nf=0;nf<(*grid)->nfaces[n];nf++) {
       ne = (*grid)->face[n*(*grid)->maxfaces+nf];
-      (*grid)->def[n*(*grid)->maxfaces+nf] = 0.5*(*grid)->dg[ne];
-
-      // commented out for periodic boundary conditions//
-      /*
       (*grid)->def[n*(*grid)->maxfaces+nf] = 
         -(((*grid)->xv[n]-maingrid->xp[(*grid)->edges[ne*NUMEDGECOLUMNS]])*(*grid)->n1[ne]+
             ((*grid)->yv[n]-maingrid->yp[(*grid)->edges[ne*NUMEDGECOLUMNS]])*(*grid)->n2[ne])*

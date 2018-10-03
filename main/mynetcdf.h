@@ -22,6 +22,7 @@
 #include "boundaries.h"
 #include "averages.h"
 #include "age.h"
+#include "sources.h"
 
 /* Netcdf error */
 #define ERRCODE 2
@@ -33,8 +34,8 @@ size_t returndimlen(int ncid, char *dimname);
 
 void InitialiseOutputNC(propT *prop, gridT *grid, physT *phys, metT *met, int myproc);
 void InitialiseOutputNCugrid(propT *prop, gridT *grid, physT *phys, metT *met, int myproc);
-void WriteOutputNC(propT *prop, gridT *grid, physT *phys, metT *met,int blowup, int myproc);
-void WriteOutputNCmerge(propT *prop, gridT *grid, physT *phys, metT *met, int blowup, int numprocs, int myproc, MPI_Comm comm);
+void WriteOutputNC(propT *prop, gridT *grid, physT *phys, metT *met,averageT *average,int blowup, int myproc);
+void WriteOutputNCmerge(propT *prop, gridT *grid, physT *phys, metT *met, averageT *average, int blowup, int numprocs, int myproc, MPI_Comm comm);
 void InitialiseAverageNCugrid(propT *prop, gridT *grid, averageT *average, int myproc);
 void WriteAverageNC(propT *prop, gridT *grid, averageT *average, physT *phys, metT *met, int blowup, MPI_Comm comm, int myproc);
 void WriteAverageNCmerge(propT *prop, gridT *grid, averageT *average, physT *phys, metT *met, int blowup, int numprocs, MPI_Comm comm, int myproc);
@@ -46,11 +47,12 @@ void ReadBdyNC(propT *prop, gridT *grid, int myproc, MPI_Comm comm);
 //void UpdateBdyNC(propT *prop, gridT *grid, int myproc,MPI_Comm comm);
 size_t returndimlenBC(int ncid, char *dimname);
 int getTimeRecBnd(REAL nctime, REAL *time, int nt);
-void ReadInitialNCcoord(propT *prop, gridT *grid, int *Nci, int *Nki, int *T0, int myproc);
+void ReadInitialNCcoord(propT *prop, gridT *grid, int *Nci, int *Nki, int *Nei, int *T0, int myproc);
 int getICtime(propT *prop, int Nt, int myproc);
 void ReturnFreeSurfaceNC(propT *prop, physT *phys, gridT *grid, REAL *htmp, int Nci, int T0, int myproc);
 void ReturnTemperatureNC(propT *prop, physT *phys, gridT *grid, REAL *htmp, int Nci, int Nki, int T0, int myproc);
 void ReturnSalinityNC(propT *prop, physT *phys, gridT *grid, REAL *htmp, int Nci, int Nki, int T0, int myproc);
+void ReturnHorizontalVelocityNC(propT *prop, physT *phys, gridT *grid, REAL *htmp, int Nci, int Nki, int T0, int myproc);
 void ReturnAgeNC(propT *prop, gridT *grid, REAL *htmp, int Nci, int Nki, int T0, int myproc);
 int MPI_NCOpen(char *file, int perms, char *caller, int myproc);
 int MPI_NCClose(int ncid);

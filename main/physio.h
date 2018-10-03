@@ -16,6 +16,7 @@
 #include "phys.h"
 #include "grid.h"
 #include "mympi.h"
+#include "averages.h"
 
 void Write2DData(REAL *array, int merge, FILE *fid, char *error_message, 
 		 gridT *grid, int numprocs, int myproc, MPI_Comm comm);
@@ -25,5 +26,6 @@ void OpenFiles(propT *prop, int myproc);
 void ReadPhysicalVariables(gridT *grid, physT *phys, propT *prop, int myproc, MPI_Comm comm);
 void OutputPhysicalVariables(gridT *grid, physT *phys, propT *prop, int myproc, int numprocs, 
 			     int blowup, MPI_Comm comm);
+
 
 #endif

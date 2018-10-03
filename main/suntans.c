@@ -35,7 +35,7 @@ int main(int argc, char *argv[])
   StartMpi(&argc,&argv,&comm,&myproc,&numprocs);
 
   ParseFlags(argc,argv,myproc);
-  
+
   if(GRID)
     GetGrid(&grid,myproc,numprocs,comm);
   else
@@ -45,6 +45,7 @@ int main(int argc, char *argv[])
   if(SOLVE) {
     //read parameters in suntans.dat into the solver
     ReadProperties(&prop,grid,myproc);
+
     // give space and initialize dzf(edge) dzz(center) dzzold(center)
     InitializeVerticalGrid(&grid,myproc);
     AllocatePhysicalVariables(grid,&phys,prop);
@@ -56,6 +57,7 @@ int main(int argc, char *argv[])
       InitializePhysicalVariables(grid,phys,prop,myproc,comm);
 
     Solve(grid,phys,prop,myproc,numprocs,comm);
+
     //    FreePhysicalVariables(grid,phys,prop);
     //    FreeTransferArrays(grid,myproc,numprocs,comm);
   }

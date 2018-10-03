@@ -29,8 +29,8 @@
 #define SMALL 1e-15
 #define CHECKCONSISTENCY 0
 #define DRYCELLHEIGHT 1e-10
-#define BUFFERHEIGHT 1e-2
-#define DEFAULT_NFACES 3
+#define BUFFERHEIGHT 4e-5
+#define DEFAULT_NFACES 4
 
 // Error/Exit codes
 #define EXIT_WRITING 1

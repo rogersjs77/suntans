@@ -12,507 +12,538 @@
 #include "phys.h"
 #include "sources.h"
 #include "memory.h"
-#include "sendrecv.h"
 
-void MomentumSource(REAL **usource, gridT *grid, physT *phys, propT *prop) {
-  int j, jptr, nc1, nc2, k;
+void MomentumSource(REAL **usource, gridT *grid, physT *phys, propT *prop, averageT *average, boundT *bound) {
+
+  int j, jptr, nc1, nc2, k, ii, jj, jjj;
   REAL Coriolis_f, ubar, depth_face;
+  REAL xe, ye, z, fz, fzb;
+/* SCS realistic example flows
+  REAL tauL = 14*12.42*3600, ULm = 0.10, ULz=0; 
+  REAL TM2 = 12.42*3600, UHtide = 0.35, Phitide = 1, UHiw=0.50, Phiiw = 0, tauW=0.25;
+  REAL alpha1 = -0.7198, alpha2=-1.6810, delta=300, drho=5.5, h2=2500;
+  REAL F_hatx=1, F_haty=0; 
+*/
+  REAL ULm = prop->ULm, ULz=prop->ULz, UHtide = prop->UHtide, UHiw = prop->Uiw;
+  REAL VLm = prop->VLm, VLz=prop->VLz;
+  REAL TauL = prop->TauL*3600, TM2 = prop->TM2*3600; 
+  REAL Phitide = prop->Phitide, Phiiw = prop->Phiiw; 
+  REAL alpha1 = prop->alpha1, alpha2=prop->alpha2, delta=prop->delta, drho=prop->drho, h2=prop->h2;
+  REAL D=prop->D;
+  
+  REAL D_hat, F_hat, k_hat;
+  REAL u_bar, u_tilde, U_bar, U_tilde, u_bar_prime, u_tilde_prime;
+  REAL u_LS_bar, U_LS_tilde, u_LS_tilde_prime, v_LS_bar, V_LS_tilde, v_LS_tilde_prime;
+  REAL tr_hat = 1-exp(-prop->rtime/prop->thetaramptime);// rampup factor
+  REAL deltaD = prop->sponge_distance, tauD = prop->sponge_decay;
+  
+  // compute iw wavenumbers
+  REAL kiw_x = 2*PI/prop->lambda*prop->Fhat_x;
+  REAL kiw_y = 2*PI/prop->lambda*prop->Fhat_y;
+  REAL kiw = sqrt(pow(kiw_x,2)+pow(kiw_y,2));
 
-  /* This is the sponge layer */
-  /*
-  if(prop->sponge_distance) {
-    for(jptr=grid->edgedist[0];jptr<grid->edgedist[1];jptr++) {
-      j = grid->edgep[jptr]; 
-      
-      nc1 = grid->grad[2*j];
-      nc2 = grid->grad[2*j+1];
-      
-      ubar = 0;
-      for(k=grid->etop[j];k<grid->Nke[j];k++) {
-	ubar += grid->dzf[j][k]*phys->u[j][k];
-	depth_face += grid->dzf[j][k];
+  // compute tide wavenumbers
+  REAL Ctide = sqrt(D*9.81);
+  REAL ktide = 2*PI/(TM2*Ctide);
+  REAL ktide_x = ktide*prop->Fhat_x;
+  REAL ktide_y = ktide*prop->Fhat_y;
+  
+  // test boundary velocity
+ // printf("rtime=%f, nctime=%f\n",prop->rtime,prop->nctime);
+
+  // go through each edge
+  ii=-1; 
+  for(jptr=grid->edgedist[0];jptr<grid->edgedist[1];jptr++) {
+
+    
+    //jind = jptr-grid->edgedist[0]; // this is the equivalent sponge
+    j = grid->edgep[jptr];     
+    nc1 = grid->grad[2*j];
+    nc2 = grid->grad[2*j+1];
+    xe = 0.5*(grid->xv[nc1]+grid->xv[nc2]); //edge distance
+    ye = 0.5*(grid->yv[nc1]+grid->yv[nc2]); //edge distance
+   
+    if (prop->wave_nesting==1){
+      // wave flux direction
+      if( (prop->Fhat_x*rn1[j]+prop->Fhat_y*rn2[j]) < 0){   // Flux dot rnormal is negative = incoming wave
+        F_hat=1;
+      }else{
+        F_hat=0;
       }
-      ubar/=depth_face;
-      
-      for(k=grid->etop[j];k<grid->Nke[j];k++) 
-	usource[j][k]-=prop->dt*exp(-4.0*rSponge[j]/prop->sponge_distance)/
-	  prop->sponge_decay*(phys->u[j][k]-ubar);
     }
-  }
-  */
 
-  /* Coriolis for a 2d problem */
-  /*
+    // sponge layer damping coeff, only from boundary to deltaD
+    D_hat=0;
+    if(rSponge[j]<deltaD){
+      D_hat = exp(-4.0*rSponge[j]/deltaD);
+    }     
+    // get indices for grid
+    ii+=1;
+    jj=jjj=0;
+    if (prop->wave_nesting==2){
+      if (D_hat>0){ 
+        jj = bound->indSponge[ii]; // not used anymore, moved to mynetcdf.c
+        // this is the equivalent sponge index;
+      }
+      if (prop->lowfreq_nudging==1){
+        jjj = bound->indLowPass[ii]; // not used anymore, moved to mynetcdf.c
+      }
+   }
+    
+
+    // wave velocity direction
+    // REAL k_hatx=1, k_haty=0;
+    // if( (k_hatx*rn1[j]+k_haty*rn2[j]) < 0){   // Flux dot rnormal is negative = incoming wave
+    //   k_hat=1;
+    // }else{
+    //   k_hat=0;
+    // }
+
+    // wavemaker location, radial from edge of sponge layer plus dW width
+    // tanh function wavemaker with width dW, side rolloff=dWside
+    // REAL dWtop=dW-2*dWside;
+    // REAL rWmid=prop->sponge_distance+dW/2;
+    // REAL rW1=rWmid-dWtop/2-dWside/2;
+    // REAL rW2=rWmid+dWtop/2+dWside/2;
+    // W_hat = 0.5*tanh(2*(rSponge[j]-rW1)/dWside)+0.5*tanh(-2*(rSponge[j]-rW2)/dWside);
+    // // exponental wavemaker
+    // REAL a1=0.5, lambda=160e3;
+    // W_hat = exp(-8*pow(rSponge[j]-rWmid,2)/pow(a1*lambda,2));
+    // rectangular wavemaker
+    // if(prop->sponge_distance<rSponge[j] && (prop->sponge_distance+dW)>rSponge[j]){
+    //   W_hat=1;
+    // }else{
+    //   W_hat=0;
+    // }
+
+
+
+    /* velocity decomposition */
+    //u = u_bar + u_tilde (separate in time, low pass, high pass)
+    //u = U + u_prime (separate in space, baroclinic, barotropic)
+    //u = (U_bar + u_bar_prime) + (U_tilde + u_tilde_prime); (bt mean, bc mean, bt tide, internal waves)
+    //u_bar = average->u_avg;
+    //u_tilde = phys->u - average->u_avg;
+    //U_bar = depth_avg(u_bar);
+    //U_tilde = depth_avg(u_tilde;
+    //u_bar_prime = u_bar - U_bar;
+    //u_tilde_prime = u_tilde - U_tilde;
+
+    /* compute depth avg velocity */
+    if(prop->wave_nesting>0){ 
+      U_bar = U_tilde = 0;
+      depth_face = 0;
+      fzb=0;
+      z=0;
+      for(k=grid->etop[j];k<grid->Nke[j];k++) {
+        z-=grid->dz[k]/2; // z on faces is at midpoint
+        u_bar = average->u_avg[j][k];
+        u_tilde = phys->u[j][k] - u_bar;
+        U_bar += grid->dzf[j][k]*u_bar;
+        U_tilde += grid->dzf[j][k]*u_tilde;
+        depth_face += grid->dzf[j][k];
+        z-=grid->dz[k]/2;
+      }
+      U_bar/=depth_face; // mean barotropic
+      U_tilde/=depth_face; // mean baroclinic
+      
+      /* Apply forcing, cycle through each z layer*/
+      z=0;
+      for(k=grid->etop[j];k<grid->Nke[j];k++) {
+        z-=grid->dz[k]/2; // z on faces is at midpoint
+
+        // compute velocity decomposition (edge normal)
+        // u = (U_bar + u_tilde_bar) + (U_prime + u_tilde_prime);
+        u_bar = average->u_avg[j][k];
+        u_tilde = phys->u[j][k] - u_bar;
+        u_bar_prime = u_bar - U_bar;
+        u_tilde_prime = u_tilde - U_tilde;
+
+        // compute forcing velocities (large scale)(u_LS,v_LS)
+        // u_LS = u_LS_bar + u_LS_tilde (time decomposition)
+        if(prop->wave_nesting==1){ //idealized
+          // fz = alpha1 * tanh((z+D-h2)/delta) + alpha2;
+          fz = alpha1 * exp(-(-z+h2)/delta) + alpha2;
+          //compute velocities in x,y
+          u_LS_bar = (ULm + ULz*fz);
+          U_LS_tilde =  UHtide * (ktide_x/ktide) * cos(ktide_x*xe + ktide_y*ye - 2*PI*prop->rtime/TM2 + Phitide);
+          u_LS_tilde_prime =  F_hat*UHiw * fz * (kiw_x/kiw) * cos(kiw_x*xe + kiw_y*ye - 2*PI*prop->rtime/TM2 + Phiiw);
+          
+          v_LS_bar = (VLm + VLz*fz);
+          V_LS_tilde =  UHtide * (ktide_y/ktide) * cos(ktide_x*xe + ktide_y*ye - 2*PI*prop->rtime/TM2 + Phitide);
+          v_LS_tilde_prime =  F_hat*UHiw * fz * (kiw_y/kiw) * cos(kiw_x*xe + kiw_y*ye - 2*PI*prop->rtime/TM2 + Phiiw);
+
+          // compute at flux faces;
+          u_LS_bar = u_LS_bar*grid->n1[j]+v_LS_bar*grid->n2[j];
+          u_LS_tilde_prime = u_LS_tilde_prime*grid->n1[j]+v_LS_tilde_prime*grid->n2[j];
+        
+        }else if(prop->wave_nesting==2){ // read in from netcdf BC file
+
+          // sponge_u = F_hat*u_tilde_prime, already preprossesed in matlab
+          if(D_hat>0){
+            u_LS_tilde_prime = bound->sponge_uf[k][j];
+          }
+          // u_LS_tilde_prime = bound->sponge_u[k][jj];
+          // v_LS_tilde_prime = bound->sponge_v[k][jj];
+
+          // low frequency velocity, already pre-prosessed in matlab
+          if(prop->lowfreq_nudging==1){
+            u_LS_bar = bound->lowfreq_uf[k][j]; // this is the new indexing (local)
+            // u_LS_bar = bound->lowfreq_uf[k][jjj]; // this is the old indexing (global)
+            // u_LS_bar = bound->lowfreq_u[k][jj];
+            // v_LS_bar = bound->lowfreq_v[k][jj];
+          }
+          // if(k==0)
+          // printf("j=%d, jptr=%d, k=%d, jj=%d, xe=%f, ye=%f, utidle=%f,vtidle=%f \n",j,jptr,k,jj,xe,ye,u_LS_tilde_prime,v_LS_tilde_prime );
+        }
+
+        /* This is the sponge layer */
+        if(D_hat>0) { 
+          usource[j][k]-= prop->dt * (u_tilde_prime - 
+            tr_hat*u_LS_tilde_prime)*D_hat/tauD;
+          // usource[j][k]-= prop->dt * (u_tilde_prime - 
+          //   tr_hat*u_LS_tilde_prime*grid->n1[j] - 
+          //   tr_hat*v_LS_tilde_prime*grid->n2[j])*D_hat/tauD;
+        }
+      
+        /*Low frequency forcing over entire domain*/
+        if(prop->lowfreq_nudging==1){
+          usource[j][k]-= prop->dt*(u_bar - tr_hat*u_LS_bar)/TauL;
+          // usource[j][k]-= prop->dt*(u_bar - tr_hat*u_LS_bar*grid->n1[j] - tr_hat*v_LS_bar*grid->n2[j])
+          //         /TauL;
+        }
+
+        // high frequency forcing in middle for testing
+        // if(xe>=Lmid1 && xe<=Lmid2) {
+        //   usource[j][k]-= prop->dt*du_wave_dt1*tr_hat;
+        // }
+
+        /* extra forcing for periodic in y, geostrophic balance*/
+        // usource[j][k]-= -prop->dt*(u_LS_bar*grid->n2[j]*prop->Coriolis_f)*
+        //         tr_hat;
+
+        /* extra forcing for periodic in x, geostrophic balance*/
+        // usource[j][k]-= prop->dt*(v_LS_bar*grid->n1[j]*prop->Coriolis_f)*
+        //         tr_hat;          
+        
+        /* this is the old style wave forcing term*/
+        //usource[j][k]-= prop->dt*average->alphaw*du_wave_dt1*tr_hat*W_hat*F_hat;
+        z-=grid->dz[k]/2;
+      }
+    }
+    // if(fabs(prop->rtime)>100000)
+    // printf("j=%d, u_bar=%f, uLS*n1[j]=%f, vLS*n2[j]=%f, phys->u[j][0]=%f, usource[j][0]=%f \n", j, u_bar,u_LS_bar*grid->n1[j], v_LS_bar*grid->n2[j],phys->u[j][0],usource[j][0] );
+  }
+
+  /* Coriolis for a 2d problem */    
+
   if(prop->n==prop->nstart+1) {
-    printf("Initializing v coriolis\n");
+    //printf("Initializing v Coriolis for a 2.5D simulation\n");
     v_coriolis = (REAL **)SunMalloc(grid->Ne*sizeof(REAL *),"MomentumSource");
-    for(j=0;j<grid->Ne;j++)
+    for(j=0;j<grid->Ne;j++) {
       v_coriolis[j] = (REAL *)SunMalloc(grid->Nke[j]*sizeof(REAL),"MomentumSource");
+
+      for(k=0;k<grid->Nke[j];k++)
+        v_coriolis[j][k] = 0.0;
+    }
   }
 
   // Hard-code coriolis here so that it can be zero in the main code
-  Coriolis_f=4.9745e-5;
+  Coriolis_f=0;
 
   for(jptr=grid->edgedist[0];jptr<grid->edgedist[1];jptr++) {
-      j = grid->edgep[jptr]; 
+    j = grid->edgep[jptr]; 
       
-      nc1 = grid->grad[2*j];
-      nc2 = grid->grad[2*j+1];
+    nc1 = grid->grad[2*j];
+    nc2 = grid->grad[2*j+1];
       
-      for(k=grid->etop[j];k<grid->Nke[j];k++) 
-	usource[j][k]+=prop->dt*Coriolis_f*(v_coriolis[j][k]*grid->n1[j]-
-					    InterpToFace(j,k,phys->uc,phys->u,grid)*grid->n2[j]);
+    for(k=grid->etop[j];k<grid->Nke[j];k++) 
+      usource[j][k]+=prop->dt*Coriolis_f*(v_coriolis[j][k]*grid->n1[j]-
+              InterpToFace(j,k,phys->uc,phys->u,grid)*grid->n2[j]);
   }
 
   for(jptr=grid->edgedist[0];jptr<grid->edgedist[1];jptr++) {
-      j = grid->edgep[jptr]; 
+    j = grid->edgep[jptr]; 
       
-      nc1 = grid->grad[2*j];
-      nc2 = grid->grad[2*j+1];
+    nc1 = grid->grad[2*j];
+    nc2 = grid->grad[2*j+1];
 
-      for(k=grid->etop[j];k<grid->Nke[j];k++) 
-	v_coriolis[j][k]-=prop->dt*Coriolis_f*InterpToFace(j,k,phys->uc,phys->u,grid);
+    for(k=grid->etop[j];k<grid->Nke[j];k++) 
+       v_coriolis[j][k]-=prop->dt*Coriolis_f*InterpToFace(j,k,phys->uc,phys->u,grid);
   }
-  */
+
 }
-/*
- * Function: SaltSource
- * --------------------
- * Usage: SaltSource(A,B,grid,phys,prop,met)
- *
+
+void KurtSource(gridT *grid, physT *phys, propT *prop, MPI_Comm comm) {
+/* Kurt style forcing to maintain constant volume averaged velocity (and reach steady state fast)
+Steps:
+1) compute volume averaged velocity from u_hat, the velocity currently stored in phys->u[j][k]
+2) compute forcing necessary to make the volume average of u_n+1 = u0
+3) add forcing times dt to usource[j][k]
 */
-void SaltSource(REAL **A, REAL **B, gridT *grid, physT *phys, propT *prop, metT *met) {
-    int i, iptr, k, ktop, gc;
-    if(prop->metmodel>0 && prop->metmodel < 4){	
-	    REAL L_w, EP, dztop, dzmin_saltflux;
-	    L_w = 2.50e6;            // Latent heat of evaporation of water (J kg^{-1})
-	    dzmin_saltflux=0.1;	
+int i, iptr, j, jptr, nc1, nc2, k; 
+REAL uvol = 0, cellvol = 0, cumvol = 0, myuvol=0, mycumvol=0, u0=0, S;
+// for(jptr=grid->edgedist[0];jptr<grid->edgedist[1];jptr++) {
+//   j = grid->edgep[jptr];
+//   nc1 = grid->grad[2*j];
+//   nc1 = grid->grad[2*j+1];
+//   cellarea = 0.5*(grid->Ac[nc1]+grid->Ac[nc2]);
+//   depth_face = 0;
+//   for(k=grid->etop[j];k<grid->Nke[j];k++) {
+//     uvol+= phys->u[j][k]*grid->dzf[j][k];
+//     depth_face += grid->dzf[j][k];
+//   }
+//   cumvol+=depth_face;
+// }
 
-	    for(iptr=grid->celldist[0];iptr<grid->celldist[1];iptr++) {
-		i = grid->cellp[iptr];
-		ktop = grid->ctop[i];
+  if(fabs(u0)>0){ // only run routine if specified velocity
+    for(iptr=grid->celldist[0];iptr<grid->celldist[1];iptr++) {
+      i = grid->cellp[iptr];
+      for(k=grid->ctop[i];k<grid->Nk[i];k++){
+          cellvol = grid->Ac[i]*grid->dzz[i][k];
+          myuvol+=phys->uc[i][k]*cellvol;
+          mycumvol+=cellvol;
+          // cellvol=0; //not necessary
+      }
+    }
 
-		//Zero-term below the surface
-		for(k=ktop;k<grid->Nk[i];k++)
-		    A[i][k]=B[i][k]=0.0;
+     MPI_Reduce(&mycumvol,&(cumvol),1,MPI_DOUBLE,MPI_SUM,0,comm);
+     MPI_Bcast(&cumvol,1,MPI_DOUBLE,0,comm);
+     MPI_Reduce(&myuvol,&(uvol),1,MPI_DOUBLE,MPI_SUM,0,comm);
+     MPI_Bcast(&uvol,1,MPI_DOUBLE,0,comm);
+     
+    uvol/=cumvol;
+    // rather than assigning each cell to receive uniform forcing (u0-uvol), we could account for hill's presence by
+    // assigning each vertical column of cells to receive unifom depth integrated forcing ((u0-uvol)*D0/D(x))... but not doing that above
 
-		dztop = Max(dzmin_saltflux,grid->dzz[i][ktop]);
-		
-		// -ve latent heat flux = positive salt flux
-		// +ve rain flux = negative salt flux
-		EP =   (met->Hl[i]/L_w + met->rain[i])/RHO0; // m/s
+    S = (u0-uvol)/prop->dt;
+    //note that this does not account for variable depth... could instead calculate column average velocity and do a S on that
 
-		//B[i][ktop] = EP*RHO0 / (dztop);  
-		//A[i][ktop] = EP*phys->s[i][ktop] / (dztop);  
-		//A[i][ktop] = -EP*phys->s[i][ktop]/(RHO0*dztop);  
-		B[i][ktop] += EP /(dztop);
-		met->EP[i]=EP;
-	   }
-   }else{
-	for(i=0;i<grid->Nc;i++)
-	  for(k=0;k<grid->Nk[i];k++)
-	    A[i][k]=B[i][k]=0;
-   }
+    //write S to a new file if this is the first timestep
+    if(prop->n==1+prop->nstart) {
+      FILE *Sfp = fopen( "KurtS.txt" , "w" );
+      fprintf (Sfp,"%e \n", S);
+      fclose(Sfp);
+    }
+    //append S to file if n/ntout is an integer
+    if(!(prop->n%prop->ntout)) {
+      FILE *Sfp = fopen( "KurtS.txt" , "a" );
+      fprintf (Sfp,"%e \n", S);
+      fclose(Sfp);
+    }
+
+    for(jptr=grid->edgedist[0];jptr<grid->edgedist[1];jptr++){
+      j = grid->edgep[jptr];
+
+      // nc1 = grid->grad[2*j];
+      // nc2 = grid->grad[2*j+1];
+      // xe = 0.5*(grid->xv[nc1]+grid->xv[nc2]);
+      // ye = grid->ye[j];
+      // S = (u0-uvol)*D/ReturnDepth(xe,ye)/prop->dt;
+
+      // update u with S/dt
+      for(k=grid->etop[j];k<grid->Nke[j];k++){
+        phys->u[j][k]+=(prop->dt*S)*grid->n1[j];
+      }
+
+    }
+  }
+
 }
+
+
 /*
  * Function: HeatSource
- * Usage: HeatSource(A,B,grid,phys,prop);
+ * Usage: HeatSource(grid,phys,prop,A,B);
  * --------------------------------------
  * Source terms for heat equation of the form
  *
  * dT/dt + u dot grad T = d/dz ( kappaT dT/dz) + A + B*T
  *
- * Assuming adiabatic top and bottom.  All non-penetrative fluxes are computed as
- * fluxes through the surface and converted to equivalent sources in the top cell.
- * The shortwave radiation is the only term that penetrates into the water column
- * and acts as a real source term.  For a description  of the linearization of
- * the non-penetrative fluxes please see the latex directory.
- *
- * Terms are based on those described in the paper by Wood et al., 2008, 
- * "Modeling hydrodynamics and heat transport in upper Klamath Lake, Oregon, 
- * and implications for water quality", USGS Scientific Investigations Report 2008-5076.
+ * Assuming adiabatic top and bottom.  Horizontal advection is
+ * explicit while all other terms use the theta method.
  *
  * Note that they must be set to zero if there is no heat
  * flux since these are temporary variables with values that may
  * be assigned elsewhere.
  *
  */
-
 void HeatSource(REAL **A, REAL **B, gridT *grid, physT *phys, propT *prop, metT *met, int myproc, MPI_Comm comm) {
- if(prop->metmodel==1){ //Wood et al., Heat Flux model
-  int i, iptr, k, ktop, gc;
-  REAL z, dztop, sigma , epsilon_w, epsilon_a, dzmin_heatflux, T_0, T_00, c_p, alpha_0,
-    r_LW, alpha_LW, F, e_s, e_a, alpha_E1, alpha_E2, alpha_E3, alpha_E4,
-    alpha_E5, L_w;
-  REAL H_LE, H_LE0, Delta_H_LE0, H_E, H_E0, Delta_H_E0, 
-    H_S, H_S0, Delta_H_S0, C_B, r_p, F_SW, r_SW, k_e;
-  REAL fixedT = 5.0; // Temperature about which we might want to linearize, if not using previous timestep value 
-  
-  //
-  REAL CP_WATER = 4186.0;
-  REAL R = 0.0;
-  REAL RSW = 0.0;
- 
-  REAL Ta , M , U2, rh ,H_SW, H_LW , lap, mslp;
-  
-  sigma = 5.67e-8;        // Boltzmann constant (W m^{-2} K^{-4})
-  epsilon_w = 0.97;       // Emissivity of water
-  dzmin_heatflux = 0.01;  // Minimum allowable depth of top cell for computation of 
-                          // non-penetrative fluxes
-  T_0 = 273.16;           // Zero C (K)
-  T_00 = 237.3;           // Used to calculate latent and sensible heat fluxes
-  c_p = 4186.0;             // Specific heat of water at standard conditions (J kg^{-1})
-  r_LW = 0.02;            // Fraction of longwave radiation reflected at surface
-  L_w = 2.5e6;            // Latent heat of evaporation of water (J kg^{-1})
-  C_B = 0.61;             // Bowen ratio (mb C^{-1})
-  r_p = 1.0;                // r_p = (p_a/p_sl) = local atmospheric pressure/sea-level atmospheric pressure
-  k_e = 2.9;              // Extinction coefficient for shortwave radiation (m^{-1})
-  r_SW = 0.05;            // Fraction of shortwave radiation reflected from surface
-
-  alpha_0 = 0.937e-5;     // Proportionality constants ([alpha_0]= K^{-2}, all others dimensionless)
-  alpha_E1 = 1.0;           // For consistency, kept this but Wood et al.'s formula is off by 9 orders of magnitude
-                          // Wood suggests F = alpha_E1*(alpha_E2 + alpha_E3*U2), but Martin et al. suggest 
-                          // F = alpha_E2 + alpha_E3*U2 with much smaller numbers
-  alpha_E2 = 2.81e-9;     // Formula from Martin et al. "Hydrodynamics and transport for water quality modeling" 
-                          // (in mb^{-1} m s^{-1}
-   alpha_E3 = 0.14e-9;     // From Martin et al. 1999
-  // Original Values in Wood et al
- // alpha_E1 = 0.26;
- // alpha_E2 = 0.50;
- // alpha_E3 = 0.54;
-  //
-  alpha_E4 = 6.11;
-  alpha_E5 = 17.3;
-  alpha_LW = 0.17;
-  
-  
-
-
-  /* 
-   * Atmospheric properties at the current time step, spatially distributed over
-   * the surface in arrays:
-   *   Ta = atmospheric temperature
-   *   M = percentage cloud cover
-   *   U2 = magnitude of wind at 2 m above surface, 
-   *   rh = relative humidity (0<rh<1)
-   *
-   */
- // GetAtmosphericProperties(Ta,M,U2,rh,grid,phys,prop);
-
-  /*
-   * Incoming longwave radiation
-   * 
-   * Horizontal variability depends only on variability of atmosphere
-   * and not on water temperature.
-   *
-   */
-  for(iptr=grid->celldist[0];iptr<grid->celldist[1];iptr++) {
-    i = grid->cellp[iptr];
-    //fprintf(stderr,"globalcell = %d, u2 = %f, Q0 = %f, H_LW = %f, rh = %f, T_air = %f, lap = %f, mslp = %f\n",grid->mnptr[i],met->u2[i],met->Q0[i],met->longwave[i], met->rh[i],met->T_air[i], met->Pa[i], met->sl[i]);
-    ktop = grid->ctop[i];
-    M = met->cloud[i];
-    Ta = met->Tair[i];
-    U2 = sqrt( pow(met->Uwind[i],2.0) + pow(met->Vwind[i],2.0) );
-    met->Hsw[i] = shortwave(prop->nctime/86400.0,prop->latitude,met->cloud[i],prop->gmtoffset/24.0);
-    H_SW = met->Hsw[i];
-    rh = met->RH[i]/100.0;
-    //H_LW = met->Hlw[i];
-    // Emissivity of air
-   epsilon_a = alpha_0*(1+alpha_LW*M*M)*pow(Ta + T_0,2.0);
-    
-    // Incoming longwave
-    // H_LW = epsilon_a*sigma*(1-r_LW)*pow(Ta[i]+T_0,2);
-    H_LW = epsilon_a*sigma*(1-r_LW)*pow(Ta+T_0,4.0);
-
-    B[i][ktop] = +0;  // No dependence on water temperature
-    A[i][ktop] = +H_LW;
-  }
-
-  /*
-   * Longwave emitted radiation
-   *
-   */
-  for(iptr=grid->celldist[0];iptr<grid->celldist[1];iptr++) {
-    i = grid->cellp[iptr];
-    
-    ktop = grid->ctop[i];
-
-    // Longwave emitted radiation
-    H_LE = -epsilon_w*sigma*pow(T_0 + phys->T[i][ktop],4);
-    //H_LE = epsilon_w*sigma*pow(T_0 + fixedT,4);
-
-    // Terms in linearization
-    Delta_H_LE0 = 4*H_LE/(T_0 + phys->T[i][ktop]);
-    H_LE0 = H_LE - Delta_H_LE0*phys->T[i][ktop];
- 
-    //Delta_H_LE0 = 4*H_LE/(T_0 + fixedT);
-    //H_LE0 = H_LE - Delta_H_LE0*fixedT;
-    
-    B[i][ktop] += -Delta_H_LE0;
-    A[i][ktop] += -H_LE0;
-	  
-    met->Hlw[i] = H_LW+H_LE;
-  }
-
-  /*
-   * Sensible (H_S) and latent/evaporative heat flux (H_E)
-   *
-   */
-  for(iptr=grid->celldist[0];iptr<grid->celldist[1];iptr++) {
-    i = grid->cellp[iptr];
-    ktop = grid->ctop[i];
-
-    // Evaporative radiation
-    F = alpha_E1*(alpha_E2 + alpha_E3*U2);
-    e_s = alpha_E4*exp(alpha_E5*phys->T[i][ktop]/(T_00 + phys->T[i][ktop]));
-
-    //e_s = alpha_E4*exp(alpha_E5*fixedT/(T_00 + fixedT));
-    e_a = alpha_E4*exp(alpha_E5*Ta/(T_00 + Ta))*rh;
-    H_E = -RHO0*L_w*F*(e_s - e_a);
-
-    // Terms in linearization
-    Delta_H_E0 = RHO0*L_w*F*alpha_E5*e_s*T_00/pow(phys->T[i][ktop]+T_00,2);
-    H_E0 = H_E - Delta_H_E0*phys->T[i][ktop];
-
-    //Delta_H_E0 = RHO0*L_w*F*alpha_E5*e_s*T_00/pow(fixedT+T_00,2);
-    //H_E0 = H_E - Delta_H_E0*fixedT;
-
-    // Put flux into top cell
-    B[i][ktop] += -Delta_H_E0;
-    A[i][ktop] += H_E0;
-    met->Hl[i] = H_E;
-
-
-    // Sensible heat flux
-//    if(e_s!=e_a && phys->T[i][ktop]!=Ta && H_E!=0 && fixedT!=Ta) {
-//      r_p = met->Pa[i] / met->sl[i];
-      r_p=1.0;  	
-//      H_S = H_E*C_B*r_p*(phys->T[i][ktop]-Ta);
-      H_S = H_E*C_B*r_p*(phys->T[i][ktop]-Ta)/(e_s-e_a);
-//      H_S = H_E*C_B*r_p*(fixedT-Ta[i]);
-      
-      // Terms in linearization
-      Delta_H_S0 = H_S*(Delta_H_E0/H_E 
-			+ 1/(phys->T[i][ktop]-Ta)
-			- alpha_E5*e_s/(e_s-e_a)*T_00/pow(phys->T[i][ktop]+T_00,2));
-      H_S0 = H_S - Delta_H_S0*phys->T[i][ktop];
-
-      // Put flux into top cell
-      B[i][ktop] += -Delta_H_S0;
-      A[i][ktop] += H_S0;
-
-      met->Hs[i]=H_S;
-//   }
-
-  }
-
-  // Now divide by rho_0 c_p \Delta z
-  for(iptr=grid->celldist[0];iptr<grid->celldist[1];iptr++) {
-    i = grid->cellp[iptr];
-    ktop = grid->ctop[i];
-    dztop = Max(dzmin_heatflux,grid->dzz[i][ktop]);
-     
-    A[i][ktop]/=(RHO0*c_p*dztop);
-    B[i][ktop]/=(RHO0*c_p*dztop);
-  }
-
-  /* 
-   * Incoming shortwave radiation
-   *
-   */
-  for(iptr=grid->celldist[0];iptr<grid->celldist[1];iptr++) {
-    i = grid->cellp[iptr];
-    ktop = grid->ctop[i];
-
-    // Make sure values beneath surface are zero
-    for(k=ktop+1;k<grid->Nk[i];k++) //originally this should be ktop+1 
+  int i, k;
+  for(i=0;i<grid->Nc;i++)
+    for(k=0;k<grid->Nk[i];k++)
       A[i][k]=B[i][k]=0;
-     
-    REAL topface, botface, depth=0; //These will be used with the heat conservative scheme of solar radiation
-    REAL ksw1 = 1/prop->Lsw; //These are extinction coefficients. L1 and L2 are in met.h  
-    
-    REAL wave1, wave1term1, wave1term2, wave1term3, wave2, wave2term1, wave2term2, wave2term3; //These are the terms from the infinite reflections formula
-
-     for(k=ktop;k<grid->Nk[i];k++) //loop for calculating the local depth
-{	depth = depth + grid->dzz[i][k]; 
 }
-	//fprintf(stderr,"i = %d, Local depth = %f\n", i, depth);
-    z=0;
-    for(k=ktop;k<grid->Nk[i];k++) {
-      z-=grid->dzz[i][k]/2;
 
-      topface = z + grid->dzz[i][k]/2; //Depth of the top face of a cell from the surface
-      botface = z - grid->dzz[i][k]/2; //Depth of the bottom face of a cell from the surface
+/*
+* Funtion: SaltSource
+*/
 
-      //F_SW = k_e*H_SW*(1-r_SW)*exp(k_e*z)/(RHO0*c_p);
+void SaltSource(REAL **A, REAL **B, gridT *grid, physT *phys, propT *prop, metT *met) {
+  int i, k;
+  for(i=0;i<grid->Nc;i++)
+    for(k=0;k<grid->Nk[i];k++)
+      A[i][k]=B[i][k]=0;
+}
 
-      wave1term1 = (exp(topface*ksw1) - exp(botface*ksw1))/(topface - botface);
-      wave1term2 = (1/(1-exp(-2*depth*ksw1))) * (exp(-(2*depth - topface)*ksw1) - exp(-(2*depth - botface)*ksw1))/(topface - botface);
-      wave1term3 = -(1/(1-exp(-2*depth*ksw1))) * (exp(-(2*depth + topface)*ksw1) - exp(-(2*depth + botface)*ksw1))/(topface - botface);  
 
-      wave2 = wave2term1 + wave2term2 + wave2term3;
+/* ** not used anymore **
+ * Function: ComputeAlphaw(grid,average,prop);
+ * -------------------------------------
+ * Computes the term alphaw which is the transfer
+ * function coefficient for wave forcing
+ *
+ */
+/*void ComputeAlphaw(gridT *grid, propT *prop, averageT *average, int myproc, int numprocs, MPI_Comm comm) {
 
-      F_SW =wave1*H_SW/(RHO0*CP_WATER);
+  int j, jptr, nc1, nc2, k, proc;
+  REAL sum_a, mysum_a, sum_kk, mysum_kk;
+  MPI_Status status;
+  REAL TauL = prop->TauL*3600, ULm = prop->ULm, ULz=prop->ULz; 
+  REAL TM2 = prop->TM2*3600, UHtide = prop->UHtide, Phitide = prop->Phitide; 
+  REAL UHiw = prop->Uiw, Phiiw = prop->Phiiw; 
+  REAL alpha1 = prop->alpha1, alpha2=prop->alpha2, delta=prop->delta, drho=prop->drho, h2=prop->h2;
+  REAL D=prop->D, F_hatx=prop->Fhat_x, F_haty=prop->Fhat_y;
+  REAL dW=prop->dW;
+  REAL xe, z, fz, fzb;
+  REAL W_hat, D_hat, F_hat;
+  REAL tr_hat = 1-exp(-prop->rtime/prop->thetaramptime);// rampup factor
+  REAL deltaD = prop->sponge_distance, tauD = prop->sponge_decay;
+  REAL u_rms_LS, u_rms, alphaw, kk, z_alphaw=prop->z_alphaw;
 
-      // Set the coefficients of the sources term here
-      B[i][k] += 0;
-      A[i][k] += F_SW;
-      
-      z-=grid->dzz[i][k]/2;
+  //printf("start average->alphaw=%f\n", average->alphaw);
+
+  // for(jptr=grid->edgedist[0];jptr<grid->edgedist[1];jptr++){
+  //   sum+=1;
+  //   }
+  //   printf("For loop, myproc=%d, %f\n",myproc,sum);
+
+
+  // compute wave transfer coefficient alphaw
+  // alphaw=0;
+  // kk=0;
+
+  // get z first (same for all cells)
+  jptr=grid->edgedist[0];
+  // get initial parameters
+  j = grid->edgep[jptr];     
+  // go to just below depth z_alphaw
+  z=0;
+  for(k=grid->etop[j];k<grid->Nke[j];k++) {
+    z-=grid->dz[k]/2; // z on faces is at midpoint
+      if( z < z_alphaw){
+        break; // go to next face
+      }
+      z-=grid->dz[k]/2; 
+    }  
+    // printf("z=%f\n",z );
+
+
+  // find relevant cells in each processor and add up sum_a and sum_kk
+  for(jptr=grid->edgedist[0];jptr<grid->edgedist[1];jptr++) {
+
+    // get initial parameters
+    j = grid->edgep[jptr];     
+    nc1 = grid->grad[2*j];
+    nc2 = grid->grad[2*j+1];
+    xe = 0.5*(grid->xv[nc1]+grid->xv[nc2]); //edge distance
+
+    fz = alpha1 * tanh((z+D-h2)/delta) + alpha2;
+    //printf("fz=%f, alpha1=%f, z=%f, D=%f, h2=%f, delta=%f, alpha2%f\n",fz,alpha1,z,D,h2,delta,alpha2);
+    // theoretical rms of wave velocity, always positive
+    u_rms_LS = fabs(UHiw*fz*grid->n1[j])*tr_hat;
+    //u_rms_LS = fabs(UHiw*fz*grid->n1[j]) + fabs(0*fz*grid->n2[j]);
+    // computed rms of wave velocity from variance
+    u_rms = sqrt(2*average->uw_var[j][k]);
+
+    // set constraints and compute alphaw only if cond met:
+    // 1. location is inner 1/4 of wavemaker
+    // 2. wave direction is not perpendicular to face
+    // 3. wave flux is into domain
+    if (rSponge[j]<(deltaD+1.5*dW) &&
+      rSponge[j]>(deltaD+dW) &&
+      u_rms>0.01 &&
+      (F_hatx*rn1[j]+F_haty*rn2[j]) < 0){
+      sum_a+=u_rms/u_rms_LS;
+      //sum_a+=tanh(-u_rms/u_rms_LS+1)+1;
+      sum_kk+=1;
+      //printf("myproc=%d, xe=%f, z=%f, urms=%f, urms_LS=%f, fz=%f, sum_a=%f, sum_kk=%f\n",myproc,xe,z,u_rms,u_rms_LS,fz,sum_a,sum_kk);
     }
   }
-}else if(prop->metmodel==2 || prop->metmodel==3){ // COARE3.0 HeatFlux Algorithm or constant flux coefficients
-   int i, k, ktop, iptr;
-   REAL dztop;
-   REAL *H0=met->Htmp;
 
-   REAL c_p = 4186.0;     // Specific heat of water at standard conditions (J kg^{-1})
-   REAL rhocp = RHO0*c_p;
-   REAL dHdT;
-   REAL eps = 1e-14;
-   REAL dzmin_heatflux = 0.1;  // Minimum allowable depth of top cell for computation of   
-   // shortwave constants
-   REAL ksw1; // light extinction coefficient
-   REAL depth, z, topface, botface;
-   REAL wave1, wave1term1, wave1term2, wave1term3;
-   REAL F_SW;
-   REAL dT;
-   
-   
-  // for(j=0;j<grid->Nc;j++){
-  for(iptr=grid->celldist[0];iptr<grid->celldist[1];iptr++) {
-    i = grid->cellp[iptr];
-     ktop = grid->ctop[i];
-     // Make sure values beneath surface are zero
-      for(k=ktop;k<grid->Nk[i];k++)
-         A[i][k]=B[i][k]=0.0;
-  
-     // Set the flux terms in the top cell for the present time step
-     H0[i] = ( met->Hs[i] + met->Hl[i] + met->Hlw[i] );
-     
-     // Calculate T+dt array
-    //if(phys->dT[i]<=0.0){
-    //   phys->dT[i]=Min(-1e-4,phys->dT[i]);
-    // }else{
-    //   phys->dT[i]=Max(1e-4,phys->dT[i]);
-    // }
-    phys->dT[i] = 0.001; //Hard-wire for stability 
-    
-     phys->Ttmp[i][ktop] = phys->T[i][ktop] + phys->dT[i];
-   }
-   
-   //Communicate the temporary Temperature array
-   ISendRecvCellData3D(phys->Ttmp,grid,myproc,comm);
 
-   // Evaluate flux terms when the temperature is T + dT
-   updateAirSeaFluxes(prop, grid, phys, met, phys->Ttmp);
-   
-   // Evaluate the implicit source term
-  // for(j=0;j<grid->Nc;j++){  
-  for(iptr=grid->celldist[0];iptr<grid->celldist[1];iptr++) {
-    i = grid->cellp[iptr];
-     ktop = grid->ctop[i];
-     
-     // Put the temperature gradient flux terms into B
-     if(fabs(phys->dT[i]) < 1e-5){
-     	dHdT=0;
-     }else{
-	 dHdT = ( (met->Hs[i] + met->Hl[i] + met->Hlw[i]) - H0[i]) / phys->dT[i];
-     }
-	   
-     A[i][ktop] = H0[i] - dHdT * phys->T[i][ktop];
-     B[i][ktop] = -dHdT;
+  //write alphaw to a new file if this is the first timestep
+  // if(prop->n==1+prop->nstart) {
+  //   FILE *Sfp = fopen( "./data/alphaw.dat" , "w" );
+  //   fprintf (Sfp,"%e %e \n", average->alphaw, prop->rtime);
+  //   fclose(Sfp);
+  // }else{
+  // //append alphaw to file if n/ntout is an integer
+  // // if(!(prop->n%prop->ntout)) {
+  //   FILE *Sfp = fopen( "./data/alphaw.dat" , "a" );
+  //   fprintf (Sfp,"%e %e \n", average->alphaw, prop->rtime);
+  //   fclose(Sfp);
+  // }
 
-     dztop = Max(dzmin_heatflux,grid->dzz[i][ktop]);
-     A[i][ktop]/=(rhocp*dztop);
-     B[i][ktop]/=(rhocp*dztop);
 
-     /*******************************************************
-     // Evaluate the shortwave radiation terms and put into A
-     ********************************************************/
-     
-     //Calculate the local depth (accounts for free surface) 
-     depth=0;
-     for(k=ktop;k<grid->Nk[i];k++) 
- 	depth += grid->dzz[i][k]; 
-     
-     // Set the light extinction coefficient - ensure that thhe extinction depth is less than the water depth
-     ksw1 = 1.0 / Min(prop->Lsw, 0.5*depth);
-
-     if(ksw1!=ksw1){
-     	printf("Error NaN computed in shortwave radiation term - too shallow!\n");
-	exit(EXIT_FAILURE);
-     }
-
-     z=0.0; // Reference from the free-surface
-     for(k=ktop;k<grid->Nk[i];k++) {
-       z-=grid->dzz[i][k]/2.0;
- 
-       topface = z + grid->dzz[i][k]/2.0; //Depth of the top face of a cell from the surface
-       botface = z - grid->dzz[i][k]/2.0; //Depth of the bottom face of a cell from the surface
- 
-       // Discrete form of dQ_sw/dz
-       wave1 = (exp(topface*ksw1) - exp(botface*ksw1))/(topface - botface);
- 
-       F_SW = wave1 * met->Hsw[i] / rhocp;
-       
-       B[i][k] += 0.0;
-       A[i][k] += F_SW;
-       
-       z-=grid->dzz[i][k]/2;
-       
-     }
-     /********************************************
-      * 	Original shortwave code
-      ********************************************
-     // Evaluate the shortwave radiation terms and put into A
-     for(k=ktop;k<grid->Nk[i];k++) //loop for calculating the local depth (accounts for free surface) 
- 	depth = depth + grid->dzz[i][k]; 
-     
-     //if (depth<dztop)
-     //	printf("Warning in sources.c: Depth at cell %d = %6.10f (<%6.10f)\n",j,depth,dztop);
-     
-     // Set the light extinction coefficient - ensure that thhe extinction depth is less than the water depth
-     ksw1 = 1.0 / Min(prop->Lsw, 0.5*depth);
-
-     z=0.0;
-     for(k=ktop;k<grid->Nk[i];k++) {
-       z-=grid->dzz[i][k]/2.0;
- 
-       topface = z + grid->dzz[i][k]/2.0; //Depth of the top face of a cell from the surface
-       botface = z - grid->dzz[i][k]/2.0; //Depth of the bottom face of a cell from the surface
- 
-       wave1term1 = (exp(topface*ksw1) - exp(botface*ksw1))/(topface - botface);
-       wave1term2 = (1.0/(1.0-exp(-2.0*depth*ksw1))) * (exp(-(2.0*depth - topface)*ksw1) - exp(-(2.0*depth - botface)*ksw1))/(topface - botface);
-       wave1term3 = -(1.0/(1.0-exp(-2.0*depth*ksw1))) * (exp(-(2.0*depth + topface)*ksw1) - exp(-(2.0*depth + botface)*ksw1))/(topface - botface);  
- 
-       wave1 = wave1term1 + wave1term2 + wave1term3;
-       
-       F_SW = wave1 * met->Hsw[i] / rhocp;
-       
-       B[i][k] += 0.0;
-       A[i][k] += F_SW;
-       
-       z-=grid->dzz[i][k]/2;
-
-       //Zero for Testing
-       //B[i][k] = 0.0;
-       //A[i][k] = 0.0;
-
-     }
-     */
-   }
- }else{ //Set flux terms to zero
-  int i,k,iptr;
-    //for(i=0;i<grid->Nc;i++)
-    for(iptr=grid->celldist[0];iptr<grid->celldist[1];iptr++) {
-      i = grid->cellp[iptr];
-      for(k=0;k<grid->Nk[i];k++){
-	A[i][k]=B[i][k]=0;
-      }
+// send and receive sum_a
+  if(myproc==0){
+    for(proc=1;proc<numprocs;proc++){
+      MPI_Recv(&mysum_a,1,MPI_DOUBLE,MPI_ANY_SOURCE,1,comm,&status);
+      sum_a+=mysum_a;
+      // printf("MPI_Recv a myproc=%d, proc=%d, mysum_a=%f, sum_a=%f, mysum_kk=%f, sum_kk=%f\n",myproc,proc,mysum_a,sum_a,mysum_kk,sum_kk);
     }
- }// End if
-} // End Heatsource
+  }else{
+    MPI_Send(&sum_a,1,MPI_DOUBLE,0,1,comm);
+    // printf("MPI_Send a myproc=%d, mysum_a=%f, sum_a=%f, mysum_kk=%f, sum_kk=%f\n",myproc,mysum_a,sum_a,mysum_kk,sum_kk);
+  }
+  MPI_Bcast(&sum_a,1,MPI_DOUBLE,0,comm);
+  // printf("MPI_Bcast a myproc=%d, sum_a=%f, sum_kk=%f\n",myproc,sum_a,sum_kk);
+
+  // send receive sum_kk
+  if(myproc==0){
+    for(proc=1;proc<numprocs;proc++){
+      MPI_Recv(&mysum_kk,1,MPI_DOUBLE,MPI_ANY_SOURCE,1,comm,&status);
+      sum_kk+=mysum_kk;
+      // printf("MPI_Recv kk myproc=%d, proc=%d, mysum_a=%f, sum_a=%f, mysum_kk=%f, sum_kk=%f\n",myproc,proc,mysum_a,sum_a,mysum_kk,sum_kk);
+    }
+  }else{
+    MPI_Send(&sum_kk,1,MPI_DOUBLE,0,1,comm);
+    // printf("MPI_Send kk myproc=%d, mysum_a=%f, sum_a=%f, mysum_kk=%f, sum_kk=%f\n",myproc,mysum_a,sum_a,mysum_kk,sum_kk);
+  }
+  MPI_Bcast(&sum_kk,1,MPI_DOUBLE,0,comm);
+  // printf("MPI_Bcast kk myproc=%d, sum_a=%f, sum_kk=%f\n",myproc,sum_a,sum_kk);
+
+
+// now compute new alphaw for proc=0, and only if variable
+if(myproc==0 && prop->alphaw==0){
+
+  // only update if at least 3 good points   
+  // alpha(i+1) = alpha(i)+dalpha; 
+  if(sum_kk>2){
+    average->alphaw+=0.5*(1-sum_a/sum_kk);
+  }
+  // overwrite any NAN results
+  if(IsNan(average->alphaw)){
+    average->alphaw=prop->alphaw;
+  }
+  // set range 0.1 < alphaw < 10 for stability
+  if(average->alphaw<0.1){
+    average->alphaw=0.1;
+  }
+  if(average->alphaw>10){
+    average->alphaw=10;
+  }
+
+  printf("end avgerage->alphaw=%f, dalpha=%f\n",average->alphaw,0.5*(1-sum_a/sum_kk));
+}
+
+// send new alphaw to all processors
+MPI_Bcast(&average->alphaw,1,MPI_DOUBLE,0,comm);
+// printf("end average->alphaw=%f\n", average->alphaw);
+
+}
+*/
 
 /*
  * Function: InitSponge
@@ -534,6 +565,13 @@ void InitSponge(gridT *grid, int myproc) {
   xp = (REAL *)SunMalloc(NpAll*sizeof(REAL),"InitSponge");
   yp = (REAL *)SunMalloc(NpAll*sizeof(REAL),"InitSponge");
   rSponge = (REAL *)SunMalloc(grid->Ne*sizeof(REAL),"InitSponge");
+  rn1 = (REAL *)SunMalloc(grid->Ne*sizeof(REAL),"InitSponge");
+  rn2 = (REAL *)SunMalloc(grid->Ne*sizeof(REAL),"InitSponge");
+
+  REAL xmax, xmin;
+
+
+
 
   // Read in points on entire grid
   ifile = MPI_FOpen(POINTSFILE,"r","InitSponge",myproc);
@@ -571,16 +609,30 @@ void InitSponge(gridT *grid, int myproc) {
 
   // Now compute the minimum distance between the edge on the
   // local processor and the boundary and place this in rSponge.
+  xmax=0;
+  xmin=INFTY;
   for(j=0;j<grid->Ne;j++) {
     rSponge[j]=INFTY;
 
+    if(grid->xe[j]>xmax){
+      xmax=grid->xe[j];
+    }
+    if(grid->xe[j]<xmin){
+      xmin=grid->xe[j];
+    }
+
     for(n=0;n<Nb;n++) {
       r2=pow(xb[n]-grid->xe[j],2)+pow(yb[n]-grid->ye[j],2);
-      if(r2<rSponge[j])
-	rSponge[j]=r2;
+      if(r2<rSponge[j]){
+        rSponge[j]=r2;
+        rn1[j]=(xb[n]-grid->xe[j])/sqrt(r2);
+        rn2[j]=(yb[n]-grid->ye[j])/sqrt(r2);
+      }
+
     }
     rSponge[j]=sqrt(rSponge[j]);
     //    printf("Processor %d: rSponge[%d]=%f\n",myproc,j,rSponge[j]);
   }
+  //printf("initsponge xmin=%f, xmax=%f\n", xmin, xmax);
 }
   

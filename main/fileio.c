@@ -150,7 +150,7 @@ double getfield(FILE *file, char *str)
       printf("Make sure there are no dangling white spaces or carriage returns at end of input files suntans.dat\n");
       printf("     and dataxy.dat (if used).\n");
     }
-    return 0;
+    return;
   }
 
   while((c != ' ') && (c != '\t') && (c != '\n') && (c != '\r') && (c != EOF)) {
@@ -424,7 +424,11 @@ double GetDefaultValue(char *str, int *status) {
 
 } else if(!strcmp(str,"readinitialnc")) {
     
-   return readinitialnc_DEFAULT;   
+   return readinitialnc_DEFAULT; 
+
+} else if(!strcmp(str,"initialUNC")) {
+    
+   return initialUNC_DEFAULT;   
 
 } else if(!strcmp(str,"calcage")) {
     
@@ -442,13 +446,42 @@ double GetDefaultValue(char *str, int *status) {
     
    return maxFaces_DEFAULT;   
 
+}else if(!strcmp(str,"Intz0B")){
+    
+    return Intz0B_DEFAULT;
+ 
+ } else if(!strcmp(str,"Intz0T")){
+    
+    return Intz0T_DEFAULT;
+ 
+ } else if(!strcmp(str,"marshmodel")){
+    
+    return marshmodel_DEFAULT;
+ 
+ } else if(!strcmp(str,"wavemodel")){
+    
+    return wavemodel_DEFAULT;
+ 
+ } else if(!strcmp(str,"culvertmodel")){
+    
+    return culvertmodel_DEFAULT;
+ 
+ } else if(!strcmp(str,"subgrid")){
+    
+    return subgrid_DEFAULT;
 
-}else {
+ } else if(!strcmp(str,"subgrideps")){
+    
+    return subgrid_DEFAULT;
+ 
+ } else if(!strcmp(str,"wave_nesting")){
+    
+    return wave_nesting_DEFAULT;
+ 
+ } else {
     *status=0;
     return 0;
-  }
-
-
+ }
 }
 
 /*

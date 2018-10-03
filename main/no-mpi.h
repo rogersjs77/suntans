@@ -14,7 +14,6 @@
 
 #define MPI_DOUBLE 8
 #define MPI_INT 4
-#define MPI_UNSIGNED 4
 #define MPI_COMM_WORLD 0
 #define MPI_SUM 3
 #define MPI_STATUS_IGNORE NULL

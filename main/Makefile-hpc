@@ -14,7 +14,7 @@ include Makefile.in
 ifneq ($(MPIHOME),)
   # For the SGI Altix
   # CC = icc
-  CC = $(MPIHOME)/bin/mpicc
+  CC = cc
   MPIFILE = 
   MPIDEF = 
 else

@@ -183,6 +183,10 @@ const int netcdfBdy_DEFAULT = 0;
 // Read initial condition netcdf
 const int readinitialnc_DEFAULT = 0;
 
+// Read initial condition U from netcdf
+const int initialUNC_DEFAULT = 0;
+
+
 // Calculate Age variables
 const int calcage_DEFAULT = 0;
 
@@ -194,3 +198,38 @@ const int calcaverage_DEFAULT = 0;
 
 // Maximum number of faces 
 const int maxFaces_DEFAULT = DEFAULT_NFACES;
+
+/* Intz0T and Intz0B
+   whether to read and interpolate Cd from z0tint.dat and z0bint.dat in Rundata
+*/
+const int Intz0T_DEFAULT = 0;
+
+const int Intz0B_DEFAULT = 0;
+
+/* culvertmodel
+   whether to consider culvertmodel 
+*/
+const int culvertmodel_DEFAULT = 0;
+
+/* marshmodel
+   whether to consider marsh model
+*/
+const int marshmodel_DEFAULT = 0;
+
+/* subgrid
+   whether to use subgrid method to calculate free surface
+   casulli subgrid method
+*/
+const int subgrid_DEFAULT = 0;
+
+const REAL subgrideps_DEFAULT = 1e-3;
+
+
+/* wavemodel
+   whether to consider wavemodel 
+*/
+const int wavemodel_DEFAULT = 0;
+
+/* idealized wave forcing
+*/
+const int wave_nesting_DEFAULT = 0;

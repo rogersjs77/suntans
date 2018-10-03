@@ -20,6 +20,7 @@
 
 #define NT 3
 
+
 // Enumerated type for open/specified bc specification
 enum {
   specified, open
@@ -33,15 +34,22 @@ typedef struct _boundT{
   size_t Ntype3;
   size_t Nseg;
   size_t Nt;
+  size_t Ntl;
   size_t Nk;
+  size_t Ne;
+  size_t Ns;
   
   // boolean operators
   int hasType2;
   int hasType3;
   int hasSeg;
+  int SpgInterpCounter;
+  int LpInterpCounter;
 
   // Grid cell indices
   int *edgep;
+  int *edgep_all;
+  int *edgep_spg;
   int *localedgep;
   int *cellp;
   int *segedgep;
@@ -51,6 +59,8 @@ typedef struct _boundT{
   int *ind2;
   int *ind3;
   int *ind3edge;
+  int *indSponge;
+  int *indLowPass;
 
   // Boundary coordinates
   REAL *xe;
@@ -59,19 +69,31 @@ typedef struct _boundT{
   REAL *yv;
   REAL *z;
   REAL *time;	
+  REAL *time_low; 
   REAL *segarea;
   REAL *localsegarea;
 
   // Time record locators
   int t0;
   int t1;
-  int t2; 
+  int t2;
+  // low freq time records
+  int t0l;
+  int t1l;
+  int t2l;
+  int updateLow;  
 
   // Data arrays at forward (_f) and backward (_b) timestep
   // Type-2 (edge centred) boundaries
 
   REAL ***boundary_u_t;
   REAL ***boundary_v_t;
+  REAL ***sponge_uf_t;
+  REAL ***lowfreq_uf_t;
+  // REAL ***sponge_u_t;
+  // REAL ***sponge_v_t;
+  // REAL ***lowfreq_u_t;
+  // REAL ***lowfreq_v_t;
   REAL ***boundary_w_t;
   REAL ***boundary_T_t;
   REAL ***boundary_S_t;
@@ -93,6 +115,12 @@ typedef struct _boundT{
 
   REAL **boundary_u;
   REAL **boundary_v;
+  REAL **sponge_uf;
+  REAL **lowfreq_uf;
+  // REAL **sponge_u;
+  // REAL **sponge_v;
+  // REAL **lowfreq_u;
+  // REAL **lowfreq_v;
   REAL **boundary_w;
   REAL **boundary_T;
   REAL **boundary_S;
@@ -126,6 +154,14 @@ typedef struct _boundT{
   REAL **T;
   REAL **S;
   REAL *h;
+
+  // // scratch variables for memory
+  REAL ***ncscratch1;
+  REAL ***ncscratch2;
+  REAL ***ncscratch3;
+  // REAL ***ncscratchType2;
+  // REAL ***ncscratchType3;
+  // REAL ***ncscratchSponge;
 } boundT;
 
 // Declare the boundary structure global
@@ -141,5 +177,7 @@ void InitBoundaryData(propT *prop, gridT *grid, int myproc, MPI_Comm comm);
 void BoundarySediment(gridT *grid, physT *phys, propT *prop);
 void AllocateBoundaryData(propT *prop, gridT *grid, boundT **bound, int myproc, MPI_Comm comm);
 void UpdateBdyNC(propT *prop, gridT *grid, int myproc, MPI_Comm comm);
+void ComputeXYmid(gridT *grid, propT *prop, int myproc, int numprocs, MPI_Comm comm);
+void UserDefinedFunction(gridT *grid, physT *phys, propT *prop, int myproc);
 
 #endif

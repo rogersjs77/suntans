@@ -15,13 +15,19 @@
 #include "grid.h"
 #include "phys.h"
 #include "met.h"
-
+#include "averages.h"
+#include "boundaries.h"
+ 
 REAL **v_coriolis;
-REAL *rSponge;
+REAL *rSponge, *rn1, *rn2, xmin, xmax;
 
-void MomentumSource(REAL **usource, gridT *grid, physT *phys, propT *prop);
+
+void MomentumSource(REAL **usource, gridT *grid, physT *phys, propT *prop, averageT *average, boundT *bound);
+void KurtSource(gridT *grid, physT *phys, propT *prop, MPI_Comm comm);
 void HeatSource(REAL **A, REAL **B, gridT *grid, physT *phys, propT *prop, metT *met, int myproc, MPI_Comm comm);
 void SaltSource(REAL **A, REAL **B, gridT *grid, physT *phys, propT *prop, metT *met);
 void InitSponge(gridT *grid, int myproc);
+// ** not used anymore **
+//void ComputeAlphaw(gridT *grid, propT *prop, averageT *average, int myproc, int numprocs, MPI_Comm comm);
 
 #endif

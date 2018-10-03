@@ -33,9 +33,8 @@
 #define EMPTY 999999
 #define CMAPFILE "cmaps/jet.cmap"
 #define NUMCOLORS 66
-//#define DEFAULT_FONT "9x15"
-//#define DEFAULT_FONT "xterm"
-#define DEFAULT_FONT "fixed"
+//#define DEFAULT_FONT "-adobe-helvetica-medium-o-normal--20-140-100-100-p-98-iso8859-9"
+#define DEFAULT_FONT "9x15"
 #define WINSCALE 0
 #define WINLEFT .2
 #define WINTOP .2
@@ -51,7 +50,7 @@
 #define ZOOMFACTOR 2.0
 #define MINZOOMRATIO 1/100.0
 #define MAXZOOMRATIO 100.0
-#define NUMBUTTONS 38
+#define NUMBUTTONS 49
 #define POINTSIZE 2
 #define NSLICEMAX 8000
 #define NSLICEMIN 2
@@ -85,6 +84,9 @@ typedef enum {
   prevprocwin, allprocswin, nextprocwin,
   allsediwin, prevsediwin, nextsediwin, 
   layerwin, taubwin,
+  z0twin, z0bwin,
+  cdvwin, hmarshwin,
+  fetchwin, hwsigwin,twsigwin, windswin, winddwin, waveubwin,wavehwin,
   saltwin, tempwin, preswin, fswin,
   uwin, vwin, wwin, vecwin, nutwin, ktwin,  
   depthwin, nonewin,
@@ -108,6 +110,9 @@ typedef enum {
 typedef enum {
   noplottype, freesurface, depth, h_d, salinity, temperature, pressure, saldiff, 
   sedic, allsedic, layer, taub,
+  cdv, hmarsh, 
+  z0b, z0t,
+  fetch, twsig, hwsig, winds, windd, waveub, waveh,
   salinity0, u_velocity, v_velocity, w_velocity, u_baroclinic, v_baroclinic,
   nut, kt
 } plottypeT;
@@ -158,6 +163,20 @@ typedef struct {
   float **initial_layerthickness;
   float **taub;
 
+  float **twsig;
+  float **hwsig;
+  float **fetch;
+  float **winds;
+  float **windd;
+  float **waveub;
+  float **waveh;
+
+
+  float **z0T;
+  float **z0B;
+  float **CdV;
+  float **Hmarsh;
+
   float *currptr;
 
   float **sliceData;
@@ -170,8 +189,10 @@ typedef struct {
   int *sliceInd;
   int *sliceProc;
 
-  int *Ne, *Nc, Np, Nkmax, nsteps, numprocs, Nslice, noutput, ntout, maxfaces,sedinum,tbmax,sediplotnum;
+  int *Ne, *Nc, Np, Nkmax, nsteps, numprocs, Nslice, noutput, ntout, maxfaces,sedinum,sediplotnum;
   int timestep, klevel, sedi, Nsize;
+  float z0b,z0t;
+  int marshmodel,wavemodel,Intz0B,Intz0T,fetchmodel,constantwind;
   int *freesurface_step_loaded, *salinity_step_loaded, *temperature_step_loaded, *pressure_step_loaded,
     *velocity_step_loaded, *nut_step_loaded, *kt_step_loaded, *layer_step_loaded, **sedi_step_loaded, *taub_step_loaded,
     bg_salinity_loaded, initial_layer_loaded;
@@ -319,9 +340,8 @@ int main(int argc, char *argv[]) {
   }
 
   dataT *data = NewData(numprocs);
-    
+   
   ReadData(data,-1,numprocs);
-
   InitializeGraphics();
 
   ReadColorMap(CMAPFILE);
@@ -352,6 +372,7 @@ int main(int argc, char *argv[]) {
   SetUpButtons();
 
   MapWindows();
+
   LoopDraw(data,plottype,procnum,numprocs);
 
   XMaskEvent(dis, ExposureMask, &report);
@@ -726,6 +747,83 @@ int main(int argc, char *argv[]) {
 	  redraw=true;
 	} else
 	  sprintf(message,"Sediment size class %d of %d already being displayed.",data->sedinum,data->Nsize);
+      } else if(report.xany.window==controlButtons[z0twin].butwin && mousebutton==left_button) {
+	if(plottype!=z0t) {
+	  plottype=z0t;
+	  sprintf(message,"Free surface friction coefficient z0T selected...");
+	  redraw=true;
+	} else
+	  sprintf(message,"Free surface friction coefficient z0T is already being displayed...");
+      } else if(report.xany.window==controlButtons[z0bwin].butwin && mousebutton==left_button) {
+	if(plottype!=z0b) {
+	  plottype=z0b;
+	  sprintf(message,"Bottom friction coefficient z0B selected...");
+	  redraw=true;
+	} else
+	  sprintf(message,"Bottom friction coefficient  is already being displayed...");
+      } else if(report.xany.window==controlButtons[cdvwin].butwin && mousebutton==left_button) {
+	if(plottype!=cdv) {
+	  plottype=cdv;
+	  sprintf(message,"vegetation drag coefficient CdV selected...");
+	  redraw=true;
+	} else
+	  sprintf(message,"vegetation drag coefficient CdV  is already being displayed...");
+      } else if(report.xany.window==controlButtons[hmarshwin].butwin && mousebutton==left_button) {
+	if(plottype!=hmarsh) {
+	  plottype=hmarsh;
+	  sprintf(message,"vegetation height hmarsh selected...");
+	  redraw=true;
+	} else
+	  sprintf(message,"vegetation height hmarsh  is already being displayed...");
+      } else if(report.xany.window==controlButtons[fetchwin].butwin && mousebutton==left_button) {
+	if(plottype!=fetch) {
+	  plottype=fetch;
+	  sprintf(message,"fetch selected...");
+	  redraw=true;
+	} else
+	  sprintf(message,"fetch is already being displayed...");
+      } else if(report.xany.window==controlButtons[hwsigwin].butwin && mousebutton==left_button) {
+	if(plottype!=hwsig) {
+	  plottype=hwsig;
+	  sprintf(message,"significant wave height selected...");
+	  redraw=true;
+	} else
+	  sprintf(message,"significant wave height is already being displayed...");
+      } else if(report.xany.window==controlButtons[twsigwin].butwin && mousebutton==left_button) {
+	if(plottype!=twsig) {
+	  plottype=twsig;
+	  sprintf(message,"significant wave period selected...");
+	  redraw=true;
+	} else
+	  sprintf(message,"significant wave period is already being displayed...");
+      } else if(report.xany.window==controlButtons[windswin].butwin && mousebutton==left_button) {
+	if(plottype!=winds) {
+	  plottype=winds;
+	  sprintf(message,"wind speed selected...");
+	  redraw=true;
+	} else
+	  sprintf(message,"wind speed is already being displayed...");
+      } else if(report.xany.window==controlButtons[winddwin].butwin && mousebutton==left_button) {
+	if(plottype!=windd) {
+	  plottype=windd;
+	  sprintf(message,"wind direction selected...");
+	  redraw=true;
+	} else
+	  sprintf(message,"wind direction is already being displayed...");
+      } else if(report.xany.window==controlButtons[waveubwin].butwin && mousebutton==left_button) {
+	if(plottype!=waveub) {
+	  plottype=waveub;
+	  sprintf(message,"wave velocity selected...");
+	  redraw=true;
+	} else
+	  sprintf(message,"wave velocity is already being displayed...");
+      } else if(report.xany.window==controlButtons[wavehwin].butwin && mousebutton==left_button) {
+	if(plottype!=waveh) {
+	  plottype=waveh;
+	  sprintf(message,"significant wave height selected...");
+	  redraw=true;
+	} else
+	  sprintf(message,"significant wave height is already being displayed...");
       } else if(report.xany.window==controlButtons[voronoiwin].butwin 
 		&& mousebutton==left_button) {
 	if(voronoipoints==false) {
@@ -1230,7 +1328,9 @@ void MyDraw(dataT *data, plottypeT plottype, int procnum, int numprocs, int iloc
     if(boundaries)
       DrawBoundaries(data->xc,data->yc,data->edges[procnum],plottype,data->mark[procnum],data->Ne[procnum]);
   }
+
   DrawControls(data,procnum,numprocs);
+
   DrawColorBar(data,procnum,numprocs,plottype);
 }
 
@@ -1750,6 +1850,39 @@ float *GetScalarPointer(dataT *data, plottypeT plottype, int klevel, int proc) {
   case v_velocity: case v_baroclinic:
     return data->v[proc][klevel];
     break;
+  case z0t:
+    return data->z0T[proc];
+    break;
+  case z0b:
+    return data->z0B[proc];
+    break;
+  case cdv:
+    return data->CdV[proc];
+    break;
+  case hmarsh:
+    return data->Hmarsh[proc];
+    break;
+  case fetch:
+    return data->fetch[proc];
+    break;
+  case hwsig:
+    return data->hwsig[proc];
+    break;
+  case winds:
+    return data->winds[proc];
+    break;
+  case windd:
+    return data->windd[proc];
+    break;
+  case waveub:
+    return data->waveub[proc];
+    break;
+  case waveh:
+    return data->waveh[proc];
+    break;
+  case twsig:
+    return data->twsig[proc];
+    break;
   case sedic:
     return data->sediC[proc][data->sedinum-1][klevel];
     break;
@@ -1896,6 +2029,7 @@ void InitializeGraphics(void) {
   XColor temp1, temp2;
 
   dis = XOpenDisplay(NULL);
+
   screen = ScreenOfDisplay(dis,0);
   screen_number = XScreenNumberOfScreen(screen);
 
@@ -1933,16 +2067,12 @@ void InitializeGraphics(void) {
   green = temp2.pixel;
   XAllocNamedColor(dis,colormap,"yellow",&temp1,&temp2);
   yellow = temp2.pixel;
-
-  // For MAC
-  fontStruct = XLoadQueryFont(dis,DEFAULT_FONT);
-  // Otherwise
-  /*
-  int mm, actual;
-  char **fontslist = XListFonts(dis,"*",10,&actual);
-  fontStruct = XLoadQueryFont(dis,fontslist[4]);
-  */
-
+  
+    fontStruct = XLoadQueryFont(dis,DEFAULT_FONT);
+  //int mm, actual;
+  //char **fontslist = XListFonts(dis,"*",10,&actual);
+  //fontStruct = XLoadQueryFont(dis,fontslist[4]);
+  
   if(!fontStruct) {
     printf("Font \"%s\" does not exist!\n",DEFAULT_FONT);
     exit(0);
@@ -2363,6 +2493,18 @@ void DrawColorBar(dataT *data, int procnum, int numprocs, plottypeT plottype) {
     case depth:
       sprintf(str,"d");
       break;
+    case z0t:
+      sprintf(str,"z0T");
+      break;
+    case z0b:
+      sprintf(str,"z0B");
+      break;
+    case cdv:
+      sprintf(str,"CdV");
+      break;
+    case hmarsh:
+      sprintf(str,"hmarsh");
+      break;
     case sedic:
       sprintf(str,"SediC%d",data->sedinum);
       break;
@@ -2374,6 +2516,27 @@ void DrawColorBar(dataT *data, int procnum, int numprocs, plottypeT plottype) {
       break; 
     case taub:
       sprintf(str,"taub");
+      break;
+    case hwsig:
+      sprintf(str,"significant wave height");
+      break;
+    case winds:
+      sprintf(str,"wind speed");
+      break;
+    case windd:
+      sprintf(str,"wind direction");
+      break;
+    case waveub:
+      sprintf(str,"wave velocity");
+      break;
+    case waveh:
+      sprintf(str,"significant wave height");
+      break;
+    case twsig:
+      sprintf(str,"significant wave period");
+      break;
+    case fetch:
+      sprintf(str,"fetch");
       break;
     case h_d: 
       sprintf(str,"h+d");
@@ -2450,9 +2613,7 @@ void DrawButton(Window button, char *str, int bcolor) {
 
   font_width=XTextWidth(fontStruct,str,strlen(str));
   font_height=fontStruct->ascent+fontStruct->descent;
-
   XGetGeometry(dis,button,&root, &x, &y, &w, &h, &d, &b);
-
   XSetForeground(dis,gc,bcolor);  
   XFillRectangle(dis,button, gc, 0, 0,w,h);
 
@@ -2634,26 +2795,40 @@ void SetUpButtons(void) {
   controlButtons[wwin].w=0.1;
   controlButtons[wwin].h=(float)BUTTONHEIGHT;
 
-  controlButtons[vecwin].string="Vectors";
-  controlButtons[vecwin].mapstring="vecwin";
-  controlButtons[vecwin].l=0.55;
-  controlButtons[vecwin].b=controlButtons[nextwin].b+4*dist;
-  controlButtons[vecwin].w=0.4;
-  controlButtons[vecwin].h=(float)BUTTONHEIGHT;
+  controlButtons[z0twin].string="z0T";
+  controlButtons[z0twin].mapstring="z0twin";
+  controlButtons[z0twin].l=0.5;
+  controlButtons[z0twin].b=controlButtons[nextwin].b+4*dist;
+  controlButtons[z0twin].w=0.2;
+  controlButtons[z0twin].h=(float)BUTTONHEIGHT;
+
+  controlButtons[z0bwin].string="z0B";
+  controlButtons[z0bwin].mapstring="z0bwin";
+  controlButtons[z0bwin].l=0.75;
+  controlButtons[z0bwin].b=controlButtons[nextwin].b+4*dist;
+  controlButtons[z0bwin].w=0.2;
+  controlButtons[z0bwin].h=(float)BUTTONHEIGHT;
 
   controlButtons[depthwin].string="Depth";
   controlButtons[depthwin].mapstring="depthwin";
   controlButtons[depthwin].l=0.05;
   controlButtons[depthwin].b=controlButtons[nextwin].b+5*dist;
-  controlButtons[depthwin].w=0.4;
+  controlButtons[depthwin].w=0.3;
   controlButtons[depthwin].h=(float)BUTTONHEIGHT;
 
-  controlButtons[nonewin].string="None";
-  controlButtons[nonewin].mapstring="nonewin";
-  controlButtons[nonewin].l=0.55;
-  controlButtons[nonewin].b=controlButtons[nextwin].b+5*dist;
-  controlButtons[nonewin].w=0.4;
-  controlButtons[nonewin].h=(float)BUTTONHEIGHT;
+  controlButtons[cdvwin].string="CdV";
+  controlButtons[cdvwin].mapstring="cdvwin";
+  controlButtons[cdvwin].l=0.4;
+  controlButtons[cdvwin].b=controlButtons[nextwin].b+5*dist;
+  controlButtons[cdvwin].w=0.2;
+  controlButtons[cdvwin].h=(float)BUTTONHEIGHT;
+
+  controlButtons[hmarshwin].string="hmarsh";
+  controlButtons[hmarshwin].mapstring="hmarshwin";
+  controlButtons[hmarshwin].l=0.625;
+  controlButtons[hmarshwin].b=controlButtons[nextwin].b+5*dist;
+  controlButtons[hmarshwin].w=0.325;
+  controlButtons[hmarshwin].h=(float)BUTTONHEIGHT;
 
   controlButtons[prevsediwin].string="<-";
   controlButtons[prevsediwin].mapstring="prevsediwin";
@@ -2690,97 +2865,161 @@ void SetUpButtons(void) {
   controlButtons[taubwin].w=0.44;
   controlButtons[taubwin].h=(float)BUTTONHEIGHT;
 
+  controlButtons[hwsigwin].string="Hw";
+  controlButtons[hwsigwin].mapstring="hwsigwin";
+  controlButtons[hwsigwin].l=0.05;
+  controlButtons[hwsigwin].b=controlButtons[nextwin].b+8*dist;
+  controlButtons[hwsigwin].w=0.25;
+  controlButtons[hwsigwin].h=(float)BUTTONHEIGHT;
+
+  controlButtons[twsigwin].string="Tw";
+  controlButtons[twsigwin].mapstring="twsigwin";
+  controlButtons[twsigwin].l=0.375;
+  controlButtons[twsigwin].b=controlButtons[nextwin].b+8*dist;
+  controlButtons[twsigwin].w=0.25;
+  controlButtons[twsigwin].h=(float)BUTTONHEIGHT;
+
+  controlButtons[fetchwin].string="Fetch";
+  controlButtons[fetchwin].mapstring="fetchwin";
+  controlButtons[fetchwin].l=0.7;
+  controlButtons[fetchwin].b=controlButtons[nextwin].b+8*dist;
+  controlButtons[fetchwin].w=0.25;
+  controlButtons[fetchwin].h=(float)BUTTONHEIGHT;
+  
+  controlButtons[windswin].string="winds";
+  controlButtons[windswin].mapstring="windswin";
+  controlButtons[windswin].l=0.05;
+  controlButtons[windswin].b=controlButtons[nextwin].b+9*dist;
+  controlButtons[windswin].w=0.25;
+  controlButtons[windswin].h=(float)BUTTONHEIGHT;
+
+  controlButtons[winddwin].string="windd";
+  controlButtons[winddwin].mapstring="winddwin";
+  controlButtons[winddwin].l=0.325;
+  controlButtons[winddwin].b=controlButtons[nextwin].b+9*dist;
+  controlButtons[winddwin].w=0.25;
+  controlButtons[winddwin].h=(float)BUTTONHEIGHT;
+
+  controlButtons[waveubwin].string="Wub";
+  controlButtons[waveubwin].mapstring="waveubwin";
+  controlButtons[waveubwin].l=0.6;
+  controlButtons[waveubwin].b=controlButtons[nextwin].b+9*dist;
+  controlButtons[waveubwin].w=0.15;
+  controlButtons[waveubwin].h=(float)BUTTONHEIGHT;
+
+  controlButtons[wavehwin].string="Wh";
+  controlButtons[wavehwin].mapstring="wavehwin";
+  controlButtons[wavehwin].l=0.8;
+  controlButtons[wavehwin].b=controlButtons[nextwin].b+9*dist;
+  controlButtons[wavehwin].w=0.15;
+  controlButtons[wavehwin].h=(float)BUTTONHEIGHT;
+
   controlButtons[edgewin].string="Edges";
   controlButtons[edgewin].mapstring="edgewin";
   controlButtons[edgewin].l=0.05;
-  controlButtons[edgewin].b=controlButtons[nextwin].b+8*dist;
+  controlButtons[edgewin].b=controlButtons[nextwin].b+10*dist;
   controlButtons[edgewin].w=0.25;
   controlButtons[edgewin].h=(float)BUTTONHEIGHT;
 
   controlButtons[voronoiwin].string="Voro";
   controlButtons[voronoiwin].mapstring="voronoiwin";
   controlButtons[voronoiwin].l=0.375;
-  controlButtons[voronoiwin].b=controlButtons[nextwin].b+8*dist;
+  controlButtons[voronoiwin].b=controlButtons[nextwin].b+10*dist;
   controlButtons[voronoiwin].w=0.25;
   controlButtons[voronoiwin].h=(float)BUTTONHEIGHT;
 
   controlButtons[delaunaywin].string="Dela";
   controlButtons[delaunaywin].mapstring="delaunaywin";
   controlButtons[delaunaywin].l=0.7;
-  controlButtons[delaunaywin].b=controlButtons[nextwin].b+8*dist;
+  controlButtons[delaunaywin].b=controlButtons[nextwin].b+10*dist;
   controlButtons[delaunaywin].w=0.25;
   controlButtons[delaunaywin].h=(float)BUTTONHEIGHT;
 
   controlButtons[zoomwin].string="ZOOM";
   controlButtons[zoomwin].mapstring="zoomwin";
   controlButtons[zoomwin].l=0.05;
-  controlButtons[zoomwin].b=controlButtons[nextwin].b+9*dist;
-  controlButtons[zoomwin].w=0.9;
+  controlButtons[zoomwin].b=controlButtons[nextwin].b+11*dist;
+  controlButtons[zoomwin].w=0.225;
   controlButtons[zoomwin].h=(float)BUTTONHEIGHT;
   controlButtons[zoomwin].status=true;
+
+  controlButtons[nonewin].string="None";
+  controlButtons[nonewin].mapstring="nonewin";
+  controlButtons[nonewin].l=0.3;
+  controlButtons[nonewin].b=controlButtons[nextwin].b+11*dist;
+  controlButtons[nonewin].w=0.225;
+  controlButtons[nonewin].h=(float)BUTTONHEIGHT;
+
+  controlButtons[vecwin].string="Vectors";
+  controlButtons[vecwin].mapstring="vecwin";
+  controlButtons[vecwin].l=0.55;
+  controlButtons[vecwin].b=controlButtons[nextwin].b+11*dist;
+  controlButtons[vecwin].w=0.4;
+  controlButtons[vecwin].h=(float)BUTTONHEIGHT;
 
   controlButtons[profwin].string="Profile";
   controlButtons[profwin].mapstring="profwin";
   controlButtons[profwin].l=0.05;
-  controlButtons[profwin].b=controlButtons[nextwin].b+10*dist;
+  controlButtons[profwin].b=controlButtons[nextwin].b+12*dist;
   controlButtons[profwin].w=0.9;
   controlButtons[profwin].h=(float)BUTTONHEIGHT;
 
   controlButtons[iskip_minus_win].string="<";
   controlButtons[iskip_minus_win].mapstring="iskip_minus_win";
   controlButtons[iskip_minus_win].l=0.05;
-  controlButtons[iskip_minus_win].b=controlButtons[nextwin].b+11*dist;
+  controlButtons[iskip_minus_win].b=controlButtons[nextwin].b+13*dist;
   controlButtons[iskip_minus_win].w=0.2;
   controlButtons[iskip_minus_win].h=(float)BUTTONHEIGHT;
 
   controlButtons[iskip_plus_win].string=">";
   controlButtons[iskip_plus_win].mapstring="iskip_plus_win";
   controlButtons[iskip_plus_win].l=0.27;
-  controlButtons[iskip_plus_win].b=controlButtons[nextwin].b+11*dist;
+  controlButtons[iskip_plus_win].b=controlButtons[nextwin].b+13*dist;
   controlButtons[iskip_plus_win].w=0.2;
   controlButtons[iskip_plus_win].h=(float)BUTTONHEIGHT;
 
   controlButtons[kskip_minus_win].string="<";
   controlButtons[kskip_minus_win].mapstring="kskip_minus_win";
   controlButtons[kskip_minus_win].l=0.53;
-  controlButtons[kskip_minus_win].b=controlButtons[nextwin].b+11*dist;
+  controlButtons[kskip_minus_win].b=controlButtons[nextwin].b+13*dist;
   controlButtons[kskip_minus_win].w=0.2;
   controlButtons[kskip_minus_win].h=(float)BUTTONHEIGHT;
 
   controlButtons[kskip_plus_win].string=">";
   controlButtons[kskip_plus_win].mapstring="kskip_plus_win";
   controlButtons[kskip_plus_win].l=0.75;
-  controlButtons[kskip_plus_win].b=controlButtons[nextwin].b+11*dist;
+  controlButtons[kskip_plus_win].b=controlButtons[nextwin].b+13*dist;
   controlButtons[kskip_plus_win].w=0.2;
   controlButtons[kskip_plus_win].h=(float)BUTTONHEIGHT;
 
   controlButtons[axisimagewin].string="Aspect";
   controlButtons[axisimagewin].mapstring="axisimagewin";
   controlButtons[axisimagewin].l=0.05;
-  controlButtons[axisimagewin].b=controlButtons[nextwin].b+12*dist;
+  controlButtons[axisimagewin].b=controlButtons[nextwin].b+14*dist;
   controlButtons[axisimagewin].w=0.4;
   controlButtons[axisimagewin].h=(float)BUTTONHEIGHT;
 
   controlButtons[cmapholdwin].string="Caxis";
   controlButtons[cmapholdwin].mapstring="axisimagewin";
   controlButtons[cmapholdwin].l=0.55;
-  controlButtons[cmapholdwin].b=controlButtons[nextwin].b+12*dist;
+  controlButtons[cmapholdwin].b=controlButtons[nextwin].b+14*dist;
   controlButtons[cmapholdwin].w=0.4;
   controlButtons[cmapholdwin].h=(float)BUTTONHEIGHT;
 
   controlButtons[reloadwin].string="Reload";
   controlButtons[reloadwin].mapstring="reloadwin";
   controlButtons[reloadwin].l=0.05;
-  controlButtons[reloadwin].b=controlButtons[nextwin].b+13*dist;
+  controlButtons[reloadwin].b=controlButtons[nextwin].b+15*dist;
   controlButtons[reloadwin].w=0.9;
   controlButtons[reloadwin].h=(float)BUTTONHEIGHT;
 
   controlButtons[quitwin].string="QUIT";
   controlButtons[quitwin].mapstring="quitwin";
   controlButtons[quitwin].l=0.05;
-  controlButtons[quitwin].b=controlButtons[nextwin].b+14*dist;
+  controlButtons[quitwin].b=controlButtons[nextwin].b+16*dist;
   controlButtons[quitwin].w=0.9;
   controlButtons[quitwin].h=(float)BUTTONHEIGHT;
+
 }
 
 void ParseCommandLine(int N, char *argv[], int *numprocs, int *n, int *k, dimT *dimensions, goT *go)
@@ -2930,6 +3169,17 @@ void FreeData(dataT *data, int numprocs) {
       free(data->taub[proc]);
       free(data->depth[proc]);
       free(data->h[proc]);
+      free(data->fetch[proc]);
+      free(data->hwsig[proc]);
+      free(data->twsig[proc]);
+      free(data->winds[proc]);
+      free(data->windd[proc]);
+      free(data->waveub[proc]);
+      free(data->waveh[proc]);
+      free(data->Hmarsh[proc]);
+      free(data->z0B[proc]);
+      free(data->z0T[proc]);
+      free(data->CdV[proc]);
       free(data->h_d[proc]);
       free(data->nfaces[proc]);
       for(j=0;j<data->Nkmax;j++) {
@@ -2970,6 +3220,17 @@ void FreeData(dataT *data, int numprocs) {
     free(data->layerthickness);
     free(data->initial_layerthickness);
     free(data->taub);
+    free(data->hwsig);
+    free(data->twsig);
+    free(data->fetch);
+    free(data->winds);
+    free(data->windd);
+    free(data->waveub);
+    free(data->waveh);
+    free(data->Hmarsh);
+    free(data->z0B);
+    free(data->z0T);
+    free(data->CdV);
     free(data->cells);
     free(data->nfaces);
     free(data->edges);
@@ -3017,7 +3278,7 @@ int GetFile(char *string, char *datadir, char *datafile, char *name, int proc) {
 
 void ReadData(dataT *data, int nstep, int numprocs) {
   int i, j, ik, ik0, proc, status, ind, ind0, nf, count, nsteps, ntout, nk, turbmodel, kk, numcolumns, nosize, nosize_start, nosize_end;
-  float xind, vel, ubar, vbar, dz, beta, dmax, fdepth;
+  float xind, vel, ubar, vbar, dz, beta, dmax, fdepth,depthelev;
   double *dummy;
   char string[BUFFERLENGTH];
   FILE *fid;
@@ -3074,13 +3335,36 @@ void ReadData(dataT *data, int nstep, int numprocs) {
     else
       data->nsteps=1+(int)GetValue(DATAFILE,"nsteps",&status)/(data->ntout);
 
+    data->marshmodel=(int)GetValue(DATAFILE,"marshmodel",&status);
+    data->CdV =  (float **)malloc(numprocs*sizeof(float *));
+    data->Hmarsh =  (float **)malloc(numprocs*sizeof(float *));
+
+    data->z0B =  (float **)malloc(numprocs*sizeof(float *));
+    data->z0T =  (float **)malloc(numprocs*sizeof(float *));
+    data->z0b=(float)GetValue(DATAFILE,"z0B",&status);
+    data->z0t=(float)GetValue(DATAFILE,"z0T",&status);
+    data->Intz0B=(int)GetValue(DATAFILE,"Intz0B",&status);
+    data->Intz0T=(int)GetValue(DATAFILE,"Intz0T",&status);
+
+    data->wavemodel=(int)GetValue(DATAFILE,"wavemodel",&status);
+    data->fetchmodel=(int)GetValue(DATAFILE,"fetchmodel",&status);
+    data->fetch =  (float **)malloc(numprocs*sizeof(float *));
+    data->twsig =  (float **)malloc(numprocs*sizeof(float *));
+    data->hwsig =  (float **)malloc(numprocs*sizeof(float *));
+    data->constantwind=(int)GetValue(DATAFILE,"constantwind",&status);
+    
+    data->winds = (float **)malloc(numprocs*sizeof(float *));
+    data->windd = (float **)malloc(numprocs*sizeof(float *));
+    data->waveub = (float **)malloc(numprocs*sizeof(float *));
+    data->waveh = (float **)malloc(numprocs*sizeof(float *));     
+
     data->sedi=(int)GetValue(DATAFILE,"computeSediments",&status);
     if(data->sedi==1){
       data->Nsize=(int)GetValue(DATAFILE,"Nsize",&status);
-      data->tbmax=(int)GetValue(DATAFILE,"TBMAX",&status);      
     } else {
       data->Nsize=1;
-    }
+    }      
+    
     data->taub =  (float **)malloc(numprocs*sizeof(float *));
     data->sediC = (float ****)malloc(numprocs*sizeof(float ***));
     data->allsediC = (float ***)malloc(numprocs*sizeof(float **));
@@ -3133,6 +3417,23 @@ void ReadData(dataT *data, int nstep, int numprocs) {
       data->xv[proc]=(float *)malloc(data->Nc[proc]*sizeof(float));
       data->yv[proc]=(float *)malloc(data->Nc[proc]*sizeof(float));
       data->nfaces[proc]=(int *)malloc(data->Nc[proc]*sizeof(float));
+
+      data->z0T[proc]=(float *)malloc(data->Nc[proc]*sizeof(float));
+      data->z0B[proc]=(float *)malloc(data->Nc[proc]*sizeof(float));
+      
+      // added marsh part
+      data->CdV[proc]=(float *)malloc(data->Nc[proc]*sizeof(float));
+      data->Hmarsh[proc]=(float *)malloc(data->Nc[proc]*sizeof(float));
+
+      // added wave part
+      data->hwsig[proc]=(float *)malloc(data->Nc[proc]*sizeof(float));
+      data->twsig[proc]=(float *)malloc(data->Nc[proc]*sizeof(float));
+      data->fetch[proc]=(float *)malloc(data->Nc[proc]*sizeof(float));
+
+      data->windd[proc]=(float *)malloc(data->Nc[proc]*sizeof(float));
+      data->winds[proc]=(float *)malloc(data->Nc[proc]*sizeof(float));
+      data->waveub[proc]=(float *)malloc(data->Nc[proc]*sizeof(float));
+      data->waveh[proc]=(float *)malloc(data->Nc[proc]*sizeof(float));
 
       // added sediment part 
       data->sediC[proc]=(float ***)malloc(data->Nsize*sizeof(float **));
@@ -3242,7 +3543,6 @@ void ReadData(dataT *data, int nstep, int numprocs) {
       if(mergeArrays) {
 	sprintf(string,"%s-voro",INPUTDEPTHFILE);
 	fid = MyFOpen(string,"r","ReadData");
-
 	for(i=0;i<data->Nc[proc];i++) {
 	  fscanf(fid,"%f %f %f",&fdepth,&fdepth,&fdepth);
 	  data->depth[proc][i]=fdepth;
@@ -3371,6 +3671,86 @@ void ReadData(dataT *data, int nstep, int numprocs) {
       }
       if(fid) fclose(fid);
 
+      // read z0t data into sunplot
+      if(data->Intz0T==1){
+	if(mergeArrays)
+	  GetFile(string,DATADIR,DATAFILE,"z0TFile",-1);
+	else
+	  GetFile(string,DATADIR,DATAFILE,"z0TFile",proc);
+
+        fid = fopen(string,"r");
+        if(fid && plottype==z0t){
+          fseek(fid,(1-1)*data->Nc[proc]*sizeof(double),0);
+	  fread(dummy,sizeof(double),data->Nc[proc],fid);      
+	  for(i=0;i<data->Nc[proc];i++)
+	    data->z0T[proc][i]=dummy[i];
+        }
+ 	if(fid) fclose(fid);	  
+      } else {
+        if(plottype==z0t){
+          for(i=0;i<data->Nc[proc];i++)
+            data->z0T[proc][i]=data->z0t;
+        }
+      }
+
+      // read z0b data into sunplot
+      if(data->Intz0B==1){
+	if(mergeArrays)
+	  GetFile(string,DATADIR,DATAFILE,"z0BFile",-1);
+	else
+	  GetFile(string,DATADIR,DATAFILE,"z0BFile",proc);
+        fid = fopen(string,"r");
+        if(fid && plottype==z0b){
+          fseek(fid,(1-1)*data->Nc[proc]*sizeof(double),0);
+	  fread(dummy,sizeof(double),data->Nc[proc],fid);      
+	  for(i=0;i<data->Nc[proc];i++)
+	    data->z0B[proc][i]=dummy[i];
+        }
+ 	if(fid) fclose(fid);	  
+      } else {
+        if(plottype==z0b){
+          for(i=0;i<data->Nc[proc];i++)
+            data->z0B[proc][i]=data->z0b;
+        }
+      }
+     
+      // read CdV data into sunplot
+      if(data->marshmodel)
+      {
+        if(mergeArrays)
+          GetFile(string,DATADIR,DATAFILE,"CdVFile",-1);
+        else
+          GetFile(string,DATADIR,DATAFILE,"CdVFile",proc);
+        fid = fopen(string,"r");
+        if(fid && plottype==cdv){
+          fseek(fid,(1-1)*data->Nc[proc]*sizeof(double),0);
+	  fread(dummy,sizeof(double),data->Nc[proc],fid);      
+	  for(i=0;i<data->Nc[proc];i++)
+	    data->CdV[proc][i]=dummy[i];
+        }
+        if(fid) fclose(fid);	  
+        
+        // read hmarsh data into sunplot
+        if(mergeArrays)
+	  GetFile(string,DATADIR,DATAFILE,"hmarshFile",-1);
+        else
+	  GetFile(string,DATADIR,DATAFILE,"hmarshFile",proc);
+        fid = fopen(string,"r");
+        if(fid && plottype==hmarsh){
+          fseek(fid,(1-1)*data->Nc[proc]*sizeof(double),0);
+	  fread(dummy,sizeof(double),data->Nc[proc],fid);      
+          for(i=0;i<data->Nc[proc];i++)
+            data->Hmarsh[proc][i]=dummy[i];
+        }
+        if(fid) fclose(fid);	  
+      } else {
+        for(i=0;i<data->Nc[proc];i++)
+        {
+          data->Hmarsh[proc][i]=0;
+	  data->CdV[proc][i]=0;
+        }
+      }
+
       if(data->sedi==1){
 	if(plottype==allsedic) {
 	  nosize_start=1;
@@ -3435,24 +3815,22 @@ void ReadData(dataT *data, int nstep, int numprocs) {
 	if(fid) fclose(fid);	  
 
         // bottom shear stress file
-        if(data->tbmax==1){
-	  if(mergeArrays)
-	    GetFile(string,DATADIR,DATAFILE,"tbFile",-1);
-	  else
-	    GetFile(string,DATADIR,DATAFILE,"tbFile",proc);	    
-	  fid = fopen(string,"r");
-	  if(fid && data->taub_step_loaded[proc]!=data->timestep && plottype==taub) {
-	    if(DEBUG) showloadstats(data->timestep,plottype);
-
-	    data->taub_step_loaded[proc]=data->timestep;
-	    fseek(fid,(nstep-1)*data->Nc[proc]*sizeof(double),0);
-	    fread(dummy,sizeof(double),data->Nc[proc],fid);      
-	    for(i=0;i<data->Nc[proc];i++){
-	      data->taub[proc][i]=dummy[i];
-	    }
+	if(mergeArrays)
+	  GetFile(string,DATADIR,DATAFILE,"tbFile",-1);
+        else
+	  GetFile(string,DATADIR,DATAFILE,"tbFile",proc);	    
+	fid = fopen(string,"r");
+	if(fid && data->taub_step_loaded[proc]!=data->timestep && plottype==taub) {
+	  if(DEBUG) showloadstats(data->timestep,plottype);
+          data->taub_step_loaded[proc]=data->timestep;
+	  fseek(fid,(nstep-1)*data->Nc[proc]*sizeof(double),0);
+	  fread(dummy,sizeof(double),data->Nc[proc],fid);      
+	  for(i=0;i<data->Nc[proc];i++){
+	    data->taub[proc][i]=dummy[i];
 	  }
-	  if(fid) fclose(fid);	  
-        }
+	}
+	if(fid) fclose(fid);	  
+
       } else {
 	// give initial value to make sure it can work even prop->sedi=0       
 	for(j=0;j<data->Nc[proc];j++){
@@ -3464,6 +3842,153 @@ void ReadData(dataT *data, int nstep, int numprocs) {
 	  data->layerthickness[proc][j]=0;
 	  data->taub[proc][j]=0;
 	}  
+      }
+
+      // add wave part
+      if(data->wavemodel==1){
+        if(data->constantwind==0 && data->fetchmodel){
+          // hwsig file
+	  if(mergeArrays)
+            GetFile(string,DATADIR,DATAFILE,"HwsigFile",-1);
+          else
+            GetFile(string,DATADIR,DATAFILE,"HwsigFile",proc);
+          fid = fopen(string,"r");
+          if(fid && plottype==hwsig) {
+            fseek(fid,(nstep-1)*data->Nc[proc]*sizeof(double),0);
+	    fread(dummy,sizeof(double),data->Nc[proc],fid);      
+	    for(i=0;i<data->Nc[proc];i++)
+	      data->hwsig[proc][i]=dummy[i];
+	    fclose(fid);
+          }
+          // twsig file
+	  if(mergeArrays)
+            GetFile(string,DATADIR,DATAFILE,"TwsigFile",-1);
+          else
+            GetFile(string,DATADIR,DATAFILE,"TwsigFile",proc);
+          fid = fopen(string,"r");
+          if(fid && plottype==twsig) {
+            fseek(fid,(nstep-1)*data->Nc[proc]*sizeof(double),0);
+	    fread(dummy,sizeof(double),data->Nc[proc],fid);      
+	    for(i=0;i<data->Nc[proc];i++)
+	      data->twsig[proc][i]=dummy[i];
+	    fclose(fid);
+          } 
+          // fetch file
+	  if(mergeArrays)
+            GetFile(string,DATADIR,DATAFILE,"FetchFile",-1);
+          else
+            GetFile(string,DATADIR,DATAFILE,"FetchFile",proc);
+          fid = fopen(string,"r");
+          if(fid) {
+            fseek(fid,(nstep-1)*data->Nc[proc]*sizeof(double),0);
+	    fread(dummy,sizeof(double),data->Nc[proc],fid);      
+	    for(i=0;i<data->Nc[proc];i++)
+	      data->fetch[proc][i]=dummy[i];
+	    fclose(fid);
+          } 
+        } else if (data->fetchmodel==1 && data->constantwind==1){
+          // hwsig file
+	  if(mergeArrays)
+            GetFile(string,DATADIR,DATAFILE,"HwsigFile",-1);
+          else
+            GetFile(string,DATADIR,DATAFILE,"HwsigFile",proc);
+          fid = fopen(string,"r");
+          if(fid && plottype==hwsig) {
+            fseek(fid,(1-1)*data->Nc[proc]*sizeof(double),0);
+	    fread(dummy,sizeof(double),data->Nc[proc],fid);      
+	    for(i=0;i<data->Nc[proc];i++)
+	      data->hwsig[proc][i]=dummy[i];
+	    fclose(fid);
+          }
+          // twsig file
+	  if(mergeArrays)
+            GetFile(string,DATADIR,DATAFILE,"TwsigFile",-1);
+          else
+            GetFile(string,DATADIR,DATAFILE,"TwsigFile",proc);
+          fid = fopen(string,"r");
+          if(fid && plottype==twsig) {
+            fseek(fid,(1-1)*data->Nc[proc]*sizeof(double),0);
+	    fread(dummy,sizeof(double),data->Nc[proc],fid);      
+	    for(i=0;i<data->Nc[proc];i++)
+	      data->twsig[proc][i]=dummy[i];
+	    fclose(fid);
+          } 
+          // fetch file
+	  if(mergeArrays)
+            GetFile(string,DATADIR,DATAFILE,"FetchFile",-1);
+          else
+            GetFile(string,DATADIR,DATAFILE,"FetchFile",proc);
+          fid = fopen(string,"r");
+          if(fid) {
+            fseek(fid,(1-1)*data->Nc[proc]*sizeof(double),0);
+	    fread(dummy,sizeof(double),data->Nc[proc],fid);      
+	    for(i=0;i<data->Nc[proc];i++)
+	      data->fetch[proc][i]=dummy[i];
+	    fclose(fid);
+          } 
+        } else if(data->fetchmodel==0){
+	  if(mergeArrays)
+            GetFile(string,DATADIR,DATAFILE,"WindSpeedFile",-1);
+          else
+            GetFile(string,DATADIR,DATAFILE,"WindSpeedFile",proc);
+          fid = fopen(string,"r");
+          if(fid) {
+            fseek(fid,(nstep-1)*data->Nc[proc]*sizeof(double),0);
+	    fread(dummy,sizeof(double),data->Nc[proc],fid);      
+	    for(i=0;i<data->Nc[proc];i++)
+	      data->winds[proc][i]=dummy[i];
+	    fclose(fid);
+          }    
+
+	  if(mergeArrays)
+            GetFile(string,DATADIR,DATAFILE,"WindDirectionFile",-1);
+          else
+            GetFile(string,DATADIR,DATAFILE,"WindDirectionFile",proc);
+          fid = fopen(string,"r");
+          if(fid) {
+            fseek(fid,(nstep-1)*data->Nc[proc]*sizeof(double),0);
+	    fread(dummy,sizeof(double),data->Nc[proc],fid);      
+	    for(i=0;i<data->Nc[proc];i++)
+	      data->windd[proc][i]=dummy[i];
+	    fclose(fid);
+          }    
+	  if(mergeArrays)
+            GetFile(string,DATADIR,DATAFILE,"WaveVelocityFile",-1);
+          else
+            GetFile(string,DATADIR,DATAFILE,"WaveVelocityFile",proc);
+          fid = fopen(string,"r");
+          if(fid) {
+            fseek(fid,(nstep-1)*data->Nc[proc]*sizeof(double),0);
+	    fread(dummy,sizeof(double),data->Nc[proc],fid);      
+	    for(i=0;i<data->Nc[proc];i++)
+	      data->waveub[proc][i]=dummy[i];
+	    fclose(fid);
+          }   
+	  if(mergeArrays)
+            GetFile(string,DATADIR,DATAFILE,"WaveHeightFile",-1);
+          else
+            GetFile(string,DATADIR,DATAFILE,"WaveHeightFile",proc);
+          fid = fopen(string,"r");
+          if(fid) {
+            fseek(fid,(nstep-1)*data->Nc[proc]*sizeof(double),0);
+	    fread(dummy,sizeof(double),data->Nc[proc],fid);      
+	    for(i=0;i<data->Nc[proc];i++)
+	      data->waveh[proc][i]=dummy[i];
+	    fclose(fid);
+          }    
+        }  
+
+      } else {
+        // give initial value to make sure it can work even prop->wavemodel=0
+        for(j=0;j<data->Nc[proc];j++){
+          data->fetch[proc][j]=0;
+          data->hwsig[proc][j]=0;
+          data->twsig[proc][j]=0;
+          data->winds[proc][j]=0;
+          data->windd[proc][j]=0;
+          data->waveub[proc][j]=0;
+          data->waveh[proc][j]=0;
+        }   
       }
 
       if(mergeArrays)
@@ -3977,9 +4502,13 @@ int GetNumOutput(int ntout) {
   }
   
   if(numoutput) {
-    numoutput=1+(int)((float)numoutput/(float)ntout);
+    numoutput=(int)((float)numoutput/(float)ntout);
     if(numoutput==0)
       numoutput=1;
+    if(numoutput%ntout>0)
+      numoutput++;
+    if(numoutput%ntout==0 && numoutput>1)
+      numoutput++;
   } else 
     numoutput=-1;
 

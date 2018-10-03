@@ -200,13 +200,10 @@ typedef struct _propT {
        *StoreFID, *StartFID, *EddyViscosityFID, *ScalarDiffusivityFID; 
   interpolation interp; int prettyplot;
   int metmodel,  varmodel, outputNetcdf,  metncid, netcdfBdy, netcdfBdyFileID, readinitialnc, initialNCfileID, calcage, agemethod, calcaverage;
-  int outputNetcdfFileID, averageNetcdfFileID, initialUNC, restartNC, restartAvgNC;
+  int outputNetcdfFileID, averageNetcdfFileID;
   REAL nctime, toffSet, gmtoffset;
-  int nctimectr, avgtimectr, avgctr, avgfilectr, ntaverage, ntaveragestore, nstepsperncfile, ncfilectr;
+  int nctimectr, avgtimectr, avgctr, avgfilectr, ntaverage, nstepsperncfile, ncfilectr;
   REAL nugget, sill, range, Lsw, Cda, Ce, Ch;
-  int wave_nesting, lowfreq_nudging;
-  REAL TauL, TM2, ULm, ULz, UHtide, Uiw, VLm, VLz, Phitide, Phiiw, dW, Fhat_x, Fhat_y, 
-       alpha1, alpha2, delta, drho, h2, D, lambda, xmid, ymid, interp_sponge;
   char  starttime[15], basetime[15]; 
   char  INPUTZ0BFILE[BUFFERLENGTH], INPUTZ0TFILE[BUFFERLENGTH];
 } propT;
