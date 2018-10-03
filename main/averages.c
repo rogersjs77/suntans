@@ -5,7 +5,6 @@
 * 
 */ 
 #include "averages.h"
-#include "sendrecv.h"
 
 /***********************************************
 * Private functions
@@ -46,6 +45,17 @@ void AllocateAverageVariables(gridT *grid, averageT **average, propT *prop)
   (*average)->U_F = (REAL **)SunMalloc(Ne*sizeof(REAL *),"AllocateAverageVariables");
   (*average)->s_F = (REAL **)SunMalloc(Ne*sizeof(REAL *),"AllocateAverageVariables");
   (*average)->T_F = (REAL **)SunMalloc(Ne*sizeof(REAL *),"AllocateAverageVariables");
+
+  // edge velocities
+  (*average)->u = (REAL **)SunMalloc(Ne*sizeof(REAL *),"AllocateAverageVariables");
+  (*average)->u_avg = (REAL **)SunMalloc(Ne*sizeof(REAL *),"AllocateAverageVariables");
+  // (*average)->u_store = (REAL ***)SunMalloc(Ne*sizeof(REAL **),"AllocateAverageVariables");
+
+  // edge velocity variance
+  // (*average)->uw_var = (REAL **)SunMalloc(Ne*sizeof(REAL *),"AllocateAverageVariables");
+  // (*average)->uw_avg = (REAL **)SunMalloc(Ne*sizeof(REAL *),"AllocateAverageVariables");
+  // (*average)->uw_var_avg = (REAL **)SunMalloc(Ne*sizeof(REAL *),"AllocateAverageVariables");
+  // (*average)->uw_var_store = (REAL ***)SunMalloc(Ne*sizeof(REAL **),"AllocateAverageVariables");
 
   if(prop->calcage)
       (*average)->agec = (REAL **)SunMalloc(Nc*sizeof(REAL *),"AllocateAverageVariables");
@@ -92,13 +102,28 @@ void AllocateAverageVariables(gridT *grid, averageT **average, propT *prop)
 
   }
   
-  // Allocate edge variables
+  // Allocate edge variables for the number of layers at that location
   for(j=0;j<Ne;j++){
       (*average)->U_F[j] = (REAL *)SunMalloc(grid->Nke[j]*sizeof(REAL),"AllocateAverageVariables");
       (*average)->s_F[j] = (REAL *)SunMalloc(grid->Nke[j]*sizeof(REAL),"AllocateAverageVariables");
       (*average)->T_F[j] = (REAL *)SunMalloc(grid->Nke[j]*sizeof(REAL),"AllocateAverageVariables");
 
+      (*average)->u[j] = (REAL *)SunMalloc(grid->Nke[j]*sizeof(REAL),"AllocateAverageVariables");
+      (*average)->u_avg[j] = (REAL *)SunMalloc(grid->Nke[j]*sizeof(REAL),"AllocateAverageVariables");
+      // (*average)->u_store[j] = (REAL **)SunMalloc(grid->Nke[j]*sizeof(REAL *),"AllocateAverageVariables");
+
+      // (*average)->uw_var[j] = (REAL *)SunMalloc(grid->Nke[j]*sizeof(REAL),"AllocateAverageVariables");
+      // (*average)->uw_avg[j] = (REAL *)SunMalloc(grid->Nke[j]*sizeof(REAL),"AllocateAverageVariables");
+      // (*average)->uw_var_avg[j] = (REAL *)SunMalloc(grid->Nke[j]*sizeof(REAL),"AllocateAverageVariables");
+      // (*average)->uw_var_store[j] = (REAL **)SunMalloc(grid->Nke[j]*sizeof(REAL *),"AllocateAverageVariables");
+      // now loop over number of stored values
+      // for(k=0;k<grid->Nke[j];k++){
+      //    // (*average)->u_store[j][k] = (REAL *)SunMalloc(prop->ntaveragestore*sizeof(REAL),"AllocateAverageVariables");
+      //    (*average)->uw_var_store[j][k] = (REAL *)SunMalloc(prop->ntaveragestore*sizeof(REAL),"AllocateAverageVariables");
+      // }
+
   }
+
   // Netcdf write variables
   (*average)->tmpvar = (REAL *)SunMalloc(grid->Nc*grid->Nkmax*sizeof(REAL),"AllocateAverageVariables");
   (*average)->tmpvarE = (REAL *)SunMalloc(grid->Ne*grid->Nkmax*sizeof(REAL),"AllocateAverageVariables");
@@ -111,9 +136,9 @@ void AllocateAverageVariables(gridT *grid, averageT **average, propT *prop)
  * ---------------------------------
  * Zero the average arrays
  */
-void ZeroAverageVariables(gridT *grid, averageT *average, propT *prop){
+void ZeroAverageVariables(gridT *grid, physT *phys, averageT *average, propT *prop ,MPI_Comm comm, int myproc){
 
-    int i,j,k,Nc=grid->Nc,Ne=grid->Ne;
+    int i,j,k,kk,Nc=grid->Nc,Ne=grid->Ne;
 
   for(i=0;i<Nc;i++) {
     average->w[i][grid->Nk[i]]=0;
@@ -157,12 +182,28 @@ void ZeroAverageVariables(gridT *grid, averageT *average, propT *prop){
   }
 
   for(j=0;j<Ne;j++){
-      for(k=0;k<grid->Nke[j];k++){
-	  average->U_F[j][k]=0;
-	  average->s_F[j][k]=0;
-	  average->T_F[j][k]=0;
-      }
+    for(k=0;k<grid->Nke[j];k++){
+      average->U_F[j][k]=0;
+	    average->s_F[j][k]=0;
+	    average->T_F[j][k]=0;
+      average->u[j][k]=0;
+      // average->uw_var[j][k]=0;
+      // average->uw_avg[j][k]=0;
+    }
   }
+  // only zero these on the first step
+  // if(prop->avgtimectr<1){
+  //   for(j=0;j<Ne;j++){
+  //     for(k=0;k<grid->Nke[j];k++){
+  //       average->u_avg[j][k]=0;
+  //     }
+  //   }
+
+  //   if(prop->restartAvgNC==1){// restart file
+  //     ReadAverageVariables(grid,prop,phys,average,myproc,comm);
+  //     prop->restartAvgNC==0; // reset so it only loads once
+  //   }
+  // }
 
 }//End of function
 
@@ -179,6 +220,8 @@ void UpdateAverageVariables(gridT *grid, averageT *average, physT *phys, metT *m
     REAL flx,dz, sdz,Tdz,theta=prop->theta;
     const REAL V0 = 1e6;
     const REAL V0inv = 1.0/V0;
+    REAL uftemp3, u_bar, u_prime, U_bar, U_prime, u_bar_tilde, u_prime_tilde;
+    REAL z, depth_face;
 
   for(iptr=grid->celldist[0];iptr<grid->celldist[1];iptr++) {
     i = grid->cellp[iptr];
@@ -200,7 +243,7 @@ void UpdateAverageVariables(gridT *grid, averageT *average, physT *phys, metT *m
 
       if(prop->calcage){
       	average->agealpha[i][k]+=age->agealpha[i][k];
-	average->agec[i][k]+=age->agec[i][k];
+	      average->agec[i][k]+=age->agec[i][k];
 	/* Calculate mean age on the fly
         if(age->agec[i][k]>1e-10){
 	    // Calculate the mean online here
@@ -238,17 +281,69 @@ void UpdateAverageVariables(gridT *grid, averageT *average, physT *phys, metT *m
     }
   }
 
+  // compute velocities
   for(jptr=grid->edgedist[0];jptr<grid->edgedist[4];jptr++) {
       j = grid->edgep[jptr]; 
-      for(k=grid->etop[j];k<grid->Nke[j];k++){
-        
-          //flx = phys->u[j][k]*grid->dzf[j][k]*grid->df[j]; 
-	  // Flux needs to be consistent with continuity equation
-	  flx = (theta*phys->u[j][k] + (1.0-theta)*phys->utmp2[j][k])*grid->dzf[j][k]*grid->df[j]; 
-	  //flx = (theta*phys->u[j][k] + (1.0-theta)*phys->utmp2[j][k])*dz*grid->df[j]; 
-	  //average->U_F[j][k] += flx; 
-	  average->U_F[j][k] += flx*V0; 
-      }
+
+    /* velocity decomposition */
+    //u = u_bar + u_prime (separate in time, low pass, high pass)
+    //u = U + u_tilde (separate in space, baroclinic, barotropic)
+    //u = (U_bar + u_tilde_bar) + (U_prime + u_tilde_prime); (bt mean, bc mean, bt tide, internal waves)
+    //u_bar = average->u_avg;
+    //u_prime = phys->u - average->u_avg;
+    //U_bar = depth_avg(u_bar);
+    //U_prime = depth_avg(u_prime);
+    //u_tilde_bar = u_bar - U_bar;
+    //u_tilde_prime = u_prime - U_prime;
+
+    /* compute depth avg velocity */ 
+    U_bar = U_prime = 0;
+    depth_face = 0;
+    z=0;
+    for(k=grid->etop[j];k<grid->Nke[j];k++) {
+      z-=grid->dz[k]/2; // z on faces is at midpoint
+      // Flux needs to be consistent with continuity equation
+      // uftemp3 = (theta*phys->u[j][k] + (1.0-theta)*phys->utmp2[j][k]); // this is u
+      uftemp3=phys->u[j][k];
+      u_bar = average->u_avg[j][k];
+      u_prime = uftemp3 - u_bar;
+      U_bar += grid->dzf[j][k]*u_bar;
+      U_prime += grid->dzf[j][k]*u_prime;
+      depth_face += grid->dzf[j][k];
+      z-=grid->dz[k]/2;
+    }
+    U_bar/=depth_face;
+    U_prime/=depth_face;
+
+    REAL tau = prop->ntaverage*prop->dt;
+    REAL dt = prop->dt;
+
+
+    for(k=grid->etop[j];k<grid->Nke[j];k++){
+      flx = (theta*phys->u[j][k] + (1.0-theta)*phys->utmp2[j][k])*grid->dzf[j][k]*grid->df[j]; 
+      average->U_F[j][k] += flx*V0;
+
+      // compute velocity decomposition (edge normal)
+      // u = (U_bar + u_tilde_bar) + (U_prime + u_tilde_prime);
+      // uftemp3 = (theta*phys->u[j][k] + (1.0-theta)*phys->utmp2[j][k]);
+      uftemp3=phys->u[j][k];
+      u_bar = average->u_avg[j][k];
+      u_prime = uftemp3 - u_bar;
+      u_bar_tilde = u_bar - U_bar;
+      u_prime_tilde = u_prime - U_prime; 
+
+      // this is inline filtering Wolfram JPO
+      average->u_avg[j][k]=(dt/tau)*uftemp3 + (1-dt/tau)*u_bar;
+      
+
+      // average->uw_var[j][k] += pow(u_prime_tilde,2)*V0;
+      // average->uw_avg[j][k] += u_prime_tilde*V0;
+      //flx = phys->u[j][k]*grid->dzf[j][k]*grid->df[j]; 
+	    // Flux needs to be consistent with continuity equation	    
+	    //flx = (theta*phys->u[j][k] + (1.0-theta)*phys->utmp2[j][k])*dz*grid->df[j]; 
+	    //average->U_F[j][k] += flx; 
+      //flx = (theta*phys->u[j][k] + (1.0-theta)*phys->utmp2[j][k]); 	    
+    }
   }
 
 }//End of function
@@ -361,7 +456,7 @@ void UpdateAverageScalars(gridT *grid, averageT *average, physT *phys, metT *met
  */
 void ComputeAverageVariables(gridT *grid, averageT *average, physT *phys, metT *met, int ntaverage, propT *prop){
 
-    int i,j,k,Nc=grid->Nc,Ne=grid->Ne;
+    int i,j,k,kk,Nc=grid->Nc,Ne=grid->Ne;
     const REAL nt = 1.0/((REAL)ntaverage);
     REAL nt3d;
     const REAL V0 = 1e-6;
@@ -412,13 +507,59 @@ void ComputeAverageVariables(gridT *grid, averageT *average, physT *phys, metT *
   }
 
   for(j=0;j<Ne;j++){
-      for(k=0;k<grid->Nke[j];k++){
-	  average->U_F[j][k] *= nt *V0;
-	  average->s_F[j][k] *= nt *V0;
-	  average->T_F[j][k] *= nt *V0;
-      }
+    for(k=0;k<grid->Nke[j];k++){
+	    average->U_F[j][k] *= nt *V0;
+	    average->s_F[j][k] *= nt *V0;
+	    average->T_F[j][k] *= nt *V0;
+
+      // average->uw_avg[j][k] *= nt *V0;
+      // average->uw_var[j][k] *= nt *V0;
+      // average->uw_var[j][k] -= pow(average->uw_avg[j][k],2);
+      // compute edge velocity u from flux U_F
+      average->u[j][k]=  average->U_F[j][k]/(grid->dzf[j][k]*grid->df[j]);
+    }
   }
 
+  // update u_store, last number is the most recent
+  // for(j=0;j<Ne;j++){
+  //   for(k=0;k<grid->Nke[j];k++){
+  //       if(prop->avgtimectr<1){ // first step only
+  //         for(kk=0;kk<prop->ntaveragestore;kk++){
+  //         // fill values with u
+  //         // average->u_store[j][k][kk] = 0;//average->u[j][k];
+  //         average->uw_var_store[j][k][kk] = 0;//average->u[j][k];
+  //         }
+  //       }
+  //       else{ // all other steps
+  //         for(kk=1;kk<prop->ntaveragestore;kk++){
+  //         // rotate through previous stored values
+  //         // average->u_store[j][k][kk-1] = average->u_store[j][k][kk];
+  //         average->uw_var_store[j][k][kk-1] = average->uw_var_store[j][k][kk];
+  //         }
+  //       }
+  //     // add in new last value
+  //     // average->u_store[j][k][prop->ntaveragestore-1] = average->u[j][k];
+  //     average->uw_var_store[j][k][prop->ntaveragestore-1] = average->uw_var[j][k];
+  //   }
+  // }
+        
+ // update u_avg
+  // REAL uftemp, uftemp2;
+  // for(j=0;j<Ne;j++){
+  //   for(k=0;k<grid->Nke[j];k++){
+  //     uftemp=0;
+  //     uftemp2=0;
+  //     for(kk=0;kk<prop->ntaveragestore;kk++){
+  //       // uftemp += average->u_store[j][k][kk];
+  //       uftemp2 += average->uw_var_store[j][k][kk];
+  //     }
+  //     // average->u_avg[j][k]=uftemp/prop->ntaveragestore;
+  //     average->uw_var_avg[j][k]=uftemp2/prop->ntaveragestore;
+  //     //average->U_Favg[j][k]=average->U_F[j][k];
+  //   }
+  // }
+
+  //printf("compute average variables ok");
 }//End of function
 
 /*
@@ -468,5 +609,129 @@ void SendRecvAverages(propT *prop, gridT *grid, averageT *average, MPI_Comm comm
     ISendRecvEdgeData3D(average->U_F,grid,myproc,comm);
     ISendRecvEdgeData3D(average->s_F,grid,myproc,comm);
     ISendRecvEdgeData3D(average->T_F,grid,myproc,comm);
+    ISendRecvEdgeData3D(average->u,grid,myproc,comm);
+    ISendRecvEdgeData3D(average->u_avg,grid,myproc,comm);
+    // ISendRecvEdgeData3D(average->uw_var,grid,myproc,comm);
+    // ISendRecvEdgeData3D(average->uw_var_avg,grid,myproc,comm);
      
 }//End of function
+
+
+/*
+ * Function: ReadAverageVariables
+ * Usage: ReadPhysicalVariables(grid,phys,prop,myproc,comm);
+ * ---------------------------------------------------------
+ * This function reads in average variables for a restart run
+ * from the restart file defined by prop->StartFID.
+ *
+ */
+void ReadAverageVariables(gridT *grid, propT *prop, physT *phys, averageT *average, int myproc, MPI_Comm comm) {
+
+  int i,iptr,j,jptr,k,Nc=grid->Nc,Ne=grid->Ne;
+  char str[BUFFERLENGTH], filename[BUFFERLENGTH];
+  // open files
+
+  // *** right now this only reads in u_avg, but other variables
+  // could be added here later. ***
+  
+  // intialize u_avg=0
+   for(j=0;j<Ne;j++){
+      for(k=0;k<grid->Nke[j];k++){
+        average->u_avg[j][k]=0;
+      }
+    }
+
+  // if a restart file, load in data from file
+  if(prop->restartAvgNC==1){// restart file
+    prop->restartAvgNC==0; // reset so it only loads once
+
+  if(VERBOSE>1 && myproc==0) printf("Reading from rstore AVG ...\n");
+
+  // MPI_GetFile(filename,DATAFILE,"StartFile","OpenFiles",myproc);
+  // sprintf(str,"%s.%d",filename,myproc);
+  // prop->StartFID = MPI_FOpen(str,"r","OpenFiles",myproc);
+  OpenFiles(prop,myproc);
+
+  // do exact same routine as physio.c to unwind start file
+
+  if(fread(&(prop->nstart),sizeof(int),1,prop->StartFID) != 1)
+    printf("Error reading prop->nstart\n");
+    // Initialise the netcdf time
+  // 
+  if(fread(phys->h,sizeof(REAL),grid->Nc,prop->StartFID) != grid->Nc)
+    printf("Error reading phys->h\n");
+  for(j=0;j<grid->Ne;j++) 
+    if(fread(phys->Cn_U[j],sizeof(REAL),grid->Nke[j],prop->StartFID) != grid->Nke[j])
+      printf("Error reading phys->Cn_U[j]\n");
+  for(j=0;j<grid->Ne;j++) 
+    if(fread(phys->Cn_U2[j],sizeof(REAL),grid->Nke[j],prop->StartFID) != grid->Nke[j]) //AB3
+      printf("Error reading phys->Cn_U2[j]\n");
+  for(i=0;i<grid->Nc;i++) 
+    if(fread(phys->Cn_W[i],sizeof(REAL),grid->Nk[i],prop->StartFID) != grid->Nk[i])
+      printf("Error reading phys->Cn_W[i]\n");
+  for(i=0;i<grid->Nc;i++) 
+    if(fread(phys->Cn_W2[i],sizeof(REAL),grid->Nk[i],prop->StartFID) != grid->Nk[i])
+      printf("Error reading phys->Cn_W[i]\n");
+  for(i=0;i<grid->Nc;i++) 
+    if(fread(phys->Cn_R[i],sizeof(REAL),grid->Nk[i],prop->StartFID) != grid->Nk[i])
+      printf("Error reading phys->Cn_R[i]\n");
+  for(i=0;i<grid->Nc;i++) 
+    if(fread(phys->Cn_T[i],sizeof(REAL),grid->Nk[i],prop->StartFID) != grid->Nk[i])
+      printf("Error reading phys->Cn_T[i]\n");
+
+  if(prop->turbmodel>=1) {
+    for(i=0;i<grid->Nc;i++) 
+      if(fread(phys->Cn_q[i],sizeof(REAL),grid->Nk[i],prop->StartFID) != grid->Nk[i])
+        printf("Error reading phys->Cn_q[i]\n");
+    for(i=0;i<grid->Nc;i++) 
+      if(fread(phys->Cn_l[i],sizeof(REAL),grid->Nk[i],prop->StartFID) != grid->Nk[i])
+        printf("Error reading phys->Cn_l[i]\n");
+
+    for(i=0;i<grid->Nc;i++) 
+      if(fread(phys->qT[i],sizeof(REAL),grid->Nk[i],prop->StartFID) != grid->Nk[i])
+        printf("Error reading phys->qT[i]\n");
+    for(i=0;i<grid->Nc;i++) 
+      if(fread(phys->lT[i],sizeof(REAL),grid->Nk[i],prop->StartFID) != grid->Nk[i])
+        printf("Error reading phys->lT[i]\n");
+  }
+  for(i=0;i<grid->Nc;i++) 
+    if(fread(phys->nu_tv[i],sizeof(REAL),grid->Nk[i],prop->StartFID) != grid->Nk[i])
+      printf("Error reading phys->nu_tv[i]\n");
+  for(i=0;i<grid->Nc;i++) 
+    if(fread(phys->kappa_tv[i],sizeof(REAL),grid->Nk[i],prop->StartFID) != grid->Nk[i])
+      printf("Error reading phys->kappa_tv[i]\n");
+
+  for(j=0;j<grid->Ne;j++) 
+    if(fread(phys->u[j],sizeof(REAL),grid->Nke[j],prop->StartFID) != grid->Nke[j])
+      printf("Error reading phys->u[j]\n");
+  for(i=0;i<grid->Nc;i++) 
+    if(fread(phys->w[i],sizeof(REAL),grid->Nk[i]+1,prop->StartFID) != grid->Nk[i]+1)
+      printf("Error reading phys->w[i]\n");
+  for(i=0;i<grid->Nc;i++) 
+    if(fread(phys->q[i],sizeof(REAL),grid->Nk[i],prop->StartFID) != grid->Nk[i])
+      printf("Error reading phys->q[i]\n");
+  for(i=0;i<grid->Nc;i++) 
+    if(fread(phys->qc[i],sizeof(REAL),grid->Nk[i],prop->StartFID) != grid->Nk[i])
+      printf("Error reading phys->qc[i]\n");
+
+  for(i=0;i<grid->Nc;i++) 
+    if(fread(phys->s[i],sizeof(REAL),grid->Nk[i],prop->StartFID) != grid->Nk[i])
+      printf("Error reading phys->s[i]\n");
+  for(i=0;i<grid->Nc;i++) 
+    if(fread(phys->T[i],sizeof(REAL),grid->Nk[i],prop->StartFID) != grid->Nk[i])
+      printf("Error reading phys->T[i]\n");
+  for(i=0;i<grid->Nc;i++) 
+    if(fread(phys->s0[i],sizeof(REAL),grid->Nk[i],prop->StartFID) != grid->Nk[i])
+      printf("Error reading phys->s0[i]\n");
+
+  // printf("read uavg, mpyroc=%d, FID=%d\n",myproc,prop->StartFID);
+
+  for(j=0;j<grid->Ne;j++) 
+    if(fread(average->u_avg[j],sizeof(REAL),grid->Nke[j],prop->StartFID) != grid->Nke[j])
+      printf("Error reading average->u_avg[j]\n");
+
+
+  fclose(prop->StartFID);
+  // if(VERBOSE>1 && myproc==0) printf("done reading\n");
+  }
+}
